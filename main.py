@@ -2,7 +2,7 @@ from agent import handle_query
 
 def chat_session():
     print("\n---")
-    print("INFO: Financial Agent Initialized.")
+    print("🤖 Financial Agent Initialized.")
     print("You can now ask questions about stock prices or general topics.")
     print("Type 'exit', 'quit', or 'q' to end the session.")
     print("---")
@@ -22,7 +22,7 @@ def chat_session():
         if not query.strip(): # Re-prompt if user 'ENTERS' by mistake
             continue
 
-        print("\nINFO: Agent is thinking...")
+        print("\n🤖 Agent is thinking...")
         final_answer = handle_query(query)
 
         print("\n--- Agent's Response ---")

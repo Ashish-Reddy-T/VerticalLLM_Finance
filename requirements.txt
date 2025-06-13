@@ -7,3 +7,4 @@ langchain-core
 langchain_experimental
 sentence-transformers
 requests
+json5

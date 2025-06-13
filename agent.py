@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 from llama_cpp import Llama
-from financial_tools import find_ticker_symbol, get_stock_quote
+from financial_tools import find_ticker_symbol, get_stock_quote, get_historical_analysis, compare_stock_data
 
 def _load_config():
     config_path = Path(__file__).parent / "config.yaml"
@@ -11,13 +11,13 @@ def _load_config():
 # Initialize LLM
 print("Agent: Loading configuration...")
 config_file = _load_config()
-model_path = config_file.get('model', {}).get('path') # Modify this if deploying!
+model_path = config_file.get('model', {}).get('path') # Modify this if deploying! (to include models dir)
 
 print("Agent: Initializing Mistral 7B model...\n")
 llm = Llama(
     model_path=model_path,
     n_gpu_layers=-1,                # Offload all layers to the GPU (my mac has 14 GPU cores)
-    n_ctx=2048,                     # Set context window size
+    n_ctx=4096,                     # Set context window size
     chat_format="mistral-instruct", # Use the correct chat template for this model
     verbose=False                   # Keep the output clean
 )
@@ -26,100 +26,205 @@ print("\nAgent: Model loaded successfully.")
 # Define the Tools the Agent could Use
 tools = {
     "get_stock_info": {
-        "description": "Use this tool to get the latest stock price, volume, and other daily trading data for a given company name or ticker symbol.",
+        "description": "Get current or recent stock price, volume, and trading data for a company. Can specify period like '1d', '5d', '1mo'.",
         "function": get_stock_quote
+    },
+    "get_historical_data": {
+        "description": "Get historical stock data and trends for analysis over periods like '1mo', '3mo', '6mo', '1y'.",
+        "function": get_historical_analysis
+    },
+    "compare_stocks": {
+        "description": "Compare multiple companies' stock performance over a specified time period.",
+        "function": compare_stock_data
     }
-}
+}   
 
 # Core Agent Logic
 def handle_query(query: str) -> str:
     """
-    Handles a user query by following the ReAct (Reason+Act) framework.
+    Handles a user query by following an enhanced ReAct framework with planning.
     """
     
-    # Step 1: RE - The LLM decides which tool to use
-    tool_descriptions = "\n".join([f"- {key}: {value['description']}" for key, value in tools.items()])
-    # - get_stock_info: Use this tool to get the latest stock price, volume, and other daily trading data for a given company name or ticker symbol.
+    # Step 1: PLAN - Create execution plan
+    execution_plan = create_execution_plan(query)
     
+    if not execution_plan['steps']:
+        # No tools needed
+        print("Agent: No specific tools needed. Answering directly.")
+        return generate_direct_response(query)
     
-    selection_prompt = f"""
-[INST] You are an expert financial assistant. Your task is to analyze the user's query and determine if a specialized tool is needed to answer it.
+    # Step 2: EXECUTE - Run the planned steps
+    results = {}
+    for i, step in enumerate(execution_plan['steps']):
+        print(f"Agent: Executing step {i+1}: {step['action']}")
+        step_result = execute_tool_step(step, results)
+        results[f"step_{i+1}"] = step_result
+        
+        if "ERROR" in str(step_result):
+            return f"I encountered an error during step {i+1}: {step_result}"
+    
+    # Step 3: SYNTHESIZE - Generate final response
+    return synthesize_response(query, execution_plan, results)
 
-Here are the available tools:
+def create_execution_plan(query: str) -> dict:
+    """
+    Creates a multi-step execution plan for complex queries.
+    """
+    tool_descriptions = "\n".join([f"- {key}: {value['description']}" for key, value in tools.items()])
+    
+    planning_prompt = f"""
+[INST] You are an expert financial assistant planner. Analyze the user's query and create a step-by-step execution plan.
+
+Available tools:
 {tool_descriptions}
 
-Based on the user's query below, which tool should you use?
-If no tool is suitable, you MUST respond with the word "none". Otherwise, respond with the exact name of the tool.
+For each step, specify:
+1. The tool to use
+2. The specific parameters needed
+3. Why this step is necessary
+
+Respond in this exact JSON format:
+{{
+    "needs_tools": true/false,
+    "steps": [
+        {{
+            "tool": "tool_name",
+            "action": "brief description",
+            "parameters": {{"param1": "value1"}},
+            "reasoning": "why this step is needed"
+        }}
+    ]
+}}
+
+If no tools are needed, set "needs_tools": false and "steps": []
 
 User Query: "{query}"
-Selected Tool: [/INST]"""
+Plan: [/INST]"""
 
-    # Ask the LLM to make a decision
     response = llm.create_chat_completion(
-        messages=[{"role": "user", "content": selection_prompt}],
-        max_tokens=15,  # Small token limit as we only expect a tool name or "none"
-        temperature=0.0 # Low temperature for deterministic tool selection
+        messages=[{"role": "user", "content": planning_prompt}],
+        max_tokens=200,
+        temperature=0.0
     )
-    chosen_tool = response['choices'][0]['message']['content'].strip().lower() # 'none' or 'get_stock_info` oe other tools if included
     
-    # Step 2: ACT - Execute the chosen tool
-    if "get_stock_info" in chosen_tool:
-        print(f"Agent: Decision made to use tool 'get_stock_info'.")
-        
-        # First, we need the entity (the company name) from the query.
-        # For simplicity, we'll extract it by asking the LLM.
-        entity_prompt = f"""[INST] From the following user query, please extract the company name or stock symbol. Respond with ONLY the name or symbol.
+    try:
+        import json
+        plan_text = response['choices'][0]['message']['content'].strip()
+        # Extract JSON from response (in case there's extra text)
+        start_idx = plan_text.find('{')
+        end_idx = plan_text.rfind('}') + 1
+        if start_idx != -1 and end_idx != -1:
+            json_text = plan_text[start_idx:end_idx]
+            plan = json.loads(json_text)
+        else:
+            plan = {"needs_tools": False, "steps": []}
+    except:
+        plan = {"needs_tools": False, "steps": []}
+    
+    return plan
+
+
+def execute_tool_step(step: dict, previous_results: dict) -> dict:
+    """
+    Executes a single tool step with access to previous results.
+    """
+    tool_name = step.get('tool')
+    parameters = step.get('parameters', {})
+    
+    if tool_name not in tools:
+        return {"ERROR": f"Unknown tool: {tool_name}"}
+    
+    # Handle different tools
+    if tool_name == "get_stock_info":
+        company_name = parameters.get('company', '')
+        period = parameters.get('period', '1d')
+        return execute_stock_info_tool(company_name, period)
+    
+    elif tool_name == "get_historical_data":
+        company_name = parameters.get('company', '')
+        period = parameters.get('period', '1mo')
+        return execute_historical_tool(company_name, period)
+    
+    elif tool_name == "compare_stocks":
+        companies = parameters.get('companies', [])
+        period = parameters.get('period', '1mo')
+        return execute_comparison_tool(companies, period)
+    
+    return {"ERROR": f"Tool execution not implemented for: {tool_name}"}
+
+def execute_stock_info_tool(company: str, period: str = '1d') -> dict:
+    """Enhanced stock info with flexible periods."""
+    if not company:
+        return {"ERROR": "No company specified"}
+    
+    symbol = find_ticker_symbol(company)
+    if not symbol:
+        return {"ERROR": f"Could not find ticker for: {company}"}
+    
+    return get_stock_quote(symbol, period)
+
+def execute_historical_tool(company: str, period: str = '1mo') -> dict:
+    """Get historical analysis for a company."""
+    if not company:
+        return {"ERROR": "No company specified"}
+    
+    symbol = find_ticker_symbol(company)
+    if not symbol:
+        return {"ERROR": f"Could not find ticker for: {company}"}
+    
+    return get_historical_analysis(symbol, period)
+
+def execute_comparison_tool(companies: list, period: str = '1mo') -> dict:
+    """Compare multiple companies."""
+    if not companies:
+        return {"ERROR": "No companies specified"}
+    
+    results = {}
+    for company in companies:
+        symbol = find_ticker_symbol(company)
+        if symbol:
+            data = get_stock_quote(symbol, period)
+            if "ERROR" not in str(data):
+                results[company] = data
+    
+    return compare_stock_data(results, period)
+
+def synthesize_response(query: str, plan: dict, results: dict) -> str:
+    """
+    Synthesizes final response from multiple tool results.
+    """
+    # Prepare context from all results
+    context_parts = []
+    for step_key, result in results.items():
+        if isinstance(result, dict) and "ERROR" not in str(result):
+            context_parts.append(f"{step_key}: {result}")
+    
+    context = "\n".join(context_parts)
+    
+    synthesis_prompt = f"""[INST] You are a helpful financial assistant. Use the following data from multiple analysis steps to provide a comprehensive answer to the user's query.
+
+Execution Plan:
+{plan}
+
+Analysis Results:
+{context}
 
 User Query: "{query}"
-Company/Symbol: [/INST]"""
-        
-        response = llm.create_chat_completion(
-            messages=[{"role": "user", "content": entity_prompt}],
-            max_tokens=10,  # Just the company name/symbol
-            temperature=0.0 # Deterministic choices required
-        )
-        company_name = response['choices'][0]['message']['content'].strip()
-        
-        if not company_name:
-            return "I couldn't identify a company name in your query. Please be more specific."
-            
-        # Use our financial tools to get the data
-        symbol = find_ticker_symbol(company_name)
-        if not symbol:
-            return f"I'm sorry, I couldn't find a stock symbol for '{company_name}'."
-            
-        stock_data = get_stock_quote(symbol)
-        if "ERROR" in stock_data:
-            return f"I encountered an error trying to fetch data for {symbol}: {stock_data['ERROR']}"
 
-        # Step 3: SYNTHESIZE - Generate the final response using the tool's data
-        response_prompt = f"""[INST] You are a helpful financial assistant. Use the following real-time stock data to answer the user's query. Provide a clear, concise, and natural language response.
+Provide a clear, comprehensive response that synthesizes insights from all the analysis steps: [/INST]"""
+    
+    response = llm.create_chat_completion(
+        messages=[{"role": "user", "content": synthesis_prompt}],
+        max_tokens=400,
+        temperature=0.7
+    )
+    return response['choices'][0]['message']['content']
 
-Context:
-- Company Name: {company_name}
-- Ticker Symbol: {stock_data['symbol']}
-- Current Price: ${stock_data['price']:.2f}
-- Today's High: ${stock_data['high']:.2f}
-- Today's Low: ${stock_data['low']:.2f}
-- Trading Volume: {stock_data['volume']:,}
-
-User Query: "{query}"
-
-Answer: [/INST]"""
-        
-        final_response = llm.create_chat_completion(
-            messages=[{"role": "user", "content": response_prompt}],
-            max_tokens=256, # More tokens for a conversational answer
-            temperature=0.7
-        )
-        return final_response['choices'][0]['message']['content']
-
-    else:
-        # Fallback: No tool was chosen - chosen_tool returned 'none'
-        print("Agent: No specific tool needed. Answering directly.")
-        fallback_prompt = f"[INST] {query} [/INST]"
-        response = llm.create_chat_completion(
-            messages=[{"role": "user", "content": fallback_prompt}],
-            max_tokens=256
-        )
-        return response['choices'][0]['message']['content']
+def generate_direct_response(query: str) -> str:
+    """Generate response for queries that don't need tools."""
+    fallback_prompt = f"[INST] {query} [/INST]"
+    response = llm.create_chat_completion(
+        messages=[{"role": "user", "content": fallback_prompt}],
+        max_tokens=256
+    )
+    return response['choices'][0]['message']['content']
