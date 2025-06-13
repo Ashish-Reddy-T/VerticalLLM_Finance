@@ -1,0 +1,9 @@
+llama-cpp-python
+yfinance
+PyYAML
+LangChain
+langchain-community
+langchain-core
+langchain_experimental
+sentence-transformers
+requests

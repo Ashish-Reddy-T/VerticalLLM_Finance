@@ -1,0 +1,12 @@
+model:
+  name: "mistral:7b-instruct-v0.3-q4_K_M"
+  path: "/Users/AshishR_T/.ollama/models/blobs/sha256-f5074b1221da0f5a2910d33b642efa5b9eb58cfdddca1c79e16d7ad28aa2b31f"
+
+api_keys:
+  alpha_vantage: "HOUB736QBS0WNLFS"
+  finnhub: "d14t6ghr01qop9mfct1gd14t6ghr01qop9mfct20"
+
+# tickers:
+#   AAPL: "Apple Inc."
+#   TSLA: "Tesla Inc."
+#   GOOGL: "Alphabet Inc."
