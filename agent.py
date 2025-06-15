@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 from llama_cpp import Llama
-from financial_tools import find_ticker_symbol, get_stock_quote, get_historical_analysis, compare_stock_data
+from financial_tools import search_yahoo_api, get_stock_quote, get_historical_analysis, compare_stock_data # find_ticker_symbol
 
 def _load_config():
     config_path = Path(__file__).parent / "config.yaml"
@@ -46,18 +46,37 @@ def handle_query(query: str) -> str:
     """
     
     # Step 1: PLAN - Create execution plan
-    execution_plan = create_execution_plan(query)
+    execution_plan = create_execution_plan(query) 
+    """
+    {
+        "needs_tools": true,
+        "steps": [
+            {
+                "tool": "get_historical_data",
+                "action": "Get Google's historical stock data",
+                "parameters": {"ticker": "GOOGL", "period": "1y"},
+                "reasoning": "To understand the long-term trends and performance of Google's stock"
+            },
+            {
+                "tool": "get_stock_info",
+                "action": "Get current price of Google's stock",
+                "parameters": {"ticker": "GOOGL"},
+                "reasoning": "To provide the user with the most recent price of Google's stock"
+            }
+        ]
+    }
+    """
     
     if not execution_plan['steps']:
         # No tools needed
         print("Agent: No specific tools needed. Answering directly.")
         return generate_direct_response(query)
-    
+      
     # Step 2: EXECUTE - Run the planned steps
     results = {}
     for i, step in enumerate(execution_plan['steps']):
-        print(f"Agent: Executing step {i+1}: {step['action']}")
-        step_result = execute_tool_step(step, results)
+        print(f"\nAgent: Executing step {i+1}: {step['action']}\nAgent: Reason: {step['reasoning']}")
+        step_result = execute_tool_step(step, results) 
         results[f"step_{i+1}"] = step_result
         
         if "ERROR" in str(step_result):
@@ -103,10 +122,14 @@ Plan: [/INST]"""
 
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": planning_prompt}],
-        max_tokens=200,
+        max_tokens=400,
         temperature=0.0
     )
-    
+
+    # Debugging
+    print("\n", "-"*10, "INFO", "-"*10)
+    print(response['choices'][0]['message']['content'].strip())
+
     try:
         import json
         plan_text = response['choices'][0]['message']['content'].strip()
@@ -114,8 +137,8 @@ Plan: [/INST]"""
         start_idx = plan_text.find('{')
         end_idx = plan_text.rfind('}') + 1
         if start_idx != -1 and end_idx != -1:
-            json_text = plan_text[start_idx:end_idx]
-            plan = json.loads(json_text)
+            json_text = plan_text[start_idx:end_idx] # Gets brackets
+            plan = json.loads(json_text) # Get dict from json
         else:
             plan = {"needs_tools": False, "steps": []}
     except:
@@ -128,25 +151,32 @@ def execute_tool_step(step: dict, previous_results: dict) -> dict:
     """
     Executes a single tool step with access to previous results.
     """
-    tool_name = step.get('tool')
-    parameters = step.get('parameters', {})
+    tool_name = step.get('tool') # ex: get_historical_data
+    parameters = step.get('parameters', {}) # ex: {"ticker": "GOOGL", "period": "1y"}
     
     if tool_name not in tools:
         return {"ERROR": f"Unknown tool: {tool_name}"}
     
     # Handle different tools
     if tool_name == "get_stock_info":
-        company_name = parameters.get('company', '')
+        it = iter(parameters.values())
+        company_name = next(it)
+        # company_name = parameters.get('company', '')
+        # period = next(it)
         period = parameters.get('period', '1d')
         return execute_stock_info_tool(company_name, period)
     
     elif tool_name == "get_historical_data":
-        company_name = parameters.get('company', '')
+        it = iter(parameters.values())
+        company_name = next(it)
+        # company_name = parameters.get('company', '')
         period = parameters.get('period', '1mo')
         return execute_historical_tool(company_name, period)
     
     elif tool_name == "compare_stocks":
-        companies = parameters.get('companies', [])
+        it = iter(parameters.values())
+        companies = next(it)        
+        # companies = parameters.get('companies', [])
         period = parameters.get('period', '1mo')
         return execute_comparison_tool(companies, period)
     
@@ -157,8 +187,8 @@ def execute_stock_info_tool(company: str, period: str = '1d') -> dict:
     if not company:
         return {"ERROR": "No company specified"}
     
-    symbol = find_ticker_symbol(company)
-    if not symbol:
+    symbol = search_yahoo_api(company)
+    if not symbol: # Both primary and secondary search fail and return None
         return {"ERROR": f"Could not find ticker for: {company}"}
     
     return get_stock_quote(symbol, period)
@@ -168,7 +198,7 @@ def execute_historical_tool(company: str, period: str = '1mo') -> dict:
     if not company:
         return {"ERROR": "No company specified"}
     
-    symbol = find_ticker_symbol(company)
+    symbol = search_yahoo_api(company)
     if not symbol:
         return {"ERROR": f"Could not find ticker for: {company}"}
     
@@ -181,7 +211,7 @@ def execute_comparison_tool(companies: list, period: str = '1mo') -> dict:
     
     results = {}
     for company in companies:
-        symbol = find_ticker_symbol(company)
+        symbol = search_yahoo_api(company)
         if symbol:
             data = get_stock_quote(symbol, period)
             if "ERROR" not in str(data):

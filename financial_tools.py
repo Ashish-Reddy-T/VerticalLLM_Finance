@@ -1,31 +1,50 @@
-import yfinance as yf, requests
+import yfinance as yf, requests, json
+from pathlib import Path
 
-def find_ticker_symbol(company_name: str) -> str | None: 
-    """
-    Primary search: If ticker is mentioned in company_name
-    Secondary search: Falls back to API search, if not available!
-    """
-    print(f"Primary Search Tool: Searching for ticker for '{company_name}'...")
-    try:
-        ticker = yf.Ticker(company_name)
-        if ticker.info and 'symbol' in ticker.info:
-            return ticker.info['symbol']
-        raise Exception("`yfinance.Ticker` found no info.") # HTTP Error 404: 
+# def find_ticker_symbol(company_name: str) -> str | None: 
+#     """
+#     See if ticker is mentioned in company_name
+#     """
+#     print(f"Primary Search Tool: Searching for ticker for '{company_name}'...")
+#     """
+#     DEBUGGING SHOWS THAT YFINANCE HAS A STOCK TICKER CALLED `MICROSOFT` but when you retrieve data from it you get nothing, the company microsoft has ticker 'MSFT' and to make things easy, I am just hard coding that.
+#     """
 
-    except Exception:
-        # If ticker=yf.Ticker fails, execute secondary search
-        return search_yahoo_api(company_name)
+#     try:
+#         ticker = yf.Ticker(company_name)
+#         if ticker.info and 'symbol' in ticker.info:
+#             return ticker.info['symbol']
+#         raise Exception("`yfinance.Ticker` found no info.") # HTTP Error 404: 
+
+#     except Exception:
+#         # If ticker=yf.Ticker fails, execute secondary search
+#         return search_by_stock_list(company_name)
+
+# def search_by_stock_list(company_name: str) -> str | None:
+#     """
+#     Try to find ticker from SEC Trustworthy List
+#     """
+#     print(f"Secondary Search Tool: Searching for ticker from SEC JSON list for '{company_name}'...")
+#     path = Path(__file__).parent / "stock_list.json"
+#     with open(path, 'r') as f:
+#         data = json.load(f)
+    
+#     for entry in data.values(): # {'cik_str': 789019, 'ticker': 'MSFT', 'title': 'MICROSOFT CORP'} --> entry
+#         if company_name.lower() in entry['title'].lower():
+#             return entry['ticker']
+#     # Tertiary search
+#     return search_yahoo_api(company_name)
     
 def search_yahoo_api(company_name: str) -> str | None:
     """
-    Use direct API call if direct ticker doesn't work!
+    Use direct API call if direct neither of the two work!
     """
-    print(f"Secondary Search Tool: Trying direct API fallback for '{company_name}'...")
+    print(f"Search Tool: Trying direct API fallback for '{company_name}'...")
     # User-Agent disguises 'bot search' to 'human search' and it connects directly to Yahoo Finance's __search endpoint__
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     # HTTP Get request
     url = f"https://query1.finance.yahoo.com/v1/finance/search?q={company_name}"
-    
+
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status() # Raises exception if status code fails (like 400, 403, 404, 500 etc.)
@@ -47,8 +66,12 @@ def search_yahoo_api(company_name: str) -> str | None:
         }
         """
         if data.get('quotes'):
-            print(f"Found symbol: {data['quotes'][0]['symbol']}")
-            return data['quotes'][0]['symbol']
+            if company_name.lower() in (['bitcoin-usd', 'usd-bitcoin'] or 'bitcoin'): #BTC gets its result in second (BTC-USD)
+                print(f"Found symbol: {data['quotes'][1]['symbol']}") 
+                return data['quotes'][1]['symbol']
+            else:
+                print(f"Found symbol: {data['quotes'][0]['symbol']}")
+                return data['quotes'][0]['symbol']
         return None # No responses found for `company_name`
     
     except requests.exceptions.RequestException as e:
@@ -73,7 +96,7 @@ def get_stock_quote(ticker_symbol: str, period: str = "1d") -> dict:
         # Calculate period performance
         period_change = ((latest['Close'] - first['Open']) / first['Open']) * 100
         
-        return {
+        res = {
             "symbol": ticker_symbol,
             "current_price": latest['Close'],
             "period_high": data['High'].max(),
@@ -85,6 +108,12 @@ def get_stock_quote(ticker_symbol: str, period: str = "1d") -> dict:
             "period": period,
             "data_points": len(data)
         }
+
+        # Debugging
+        print("\n", "-"*10, "CURR. ANALYSIS", "-"*10)
+        print(res)
+
+        return res
     
     except Exception as e:
         return {"ERROR": f"An error occurred while fetching the quote: {e}"}
@@ -112,8 +141,8 @@ def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
         # Moving averages
         ma_short = closes.rolling(window=min(5, len(closes))).mean().iloc[-1]
         ma_long = closes.rolling(window=min(10, len(closes))).mean().iloc[-1]
-        
-        return {
+
+        res = {
             "symbol": ticker_symbol,
             "period": period,
             "trend_direction": recent_trend,
@@ -125,6 +154,12 @@ def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
             "avg_daily_volume": volumes.mean(),
             "total_return_pct": ((closes.iloc[-1] - closes.iloc[0]) / closes.iloc[0]) * 100
         }
+
+        # Debugging
+        print("\n", "-"*10, "HIST. ANALYSIS", "-"*10)
+        print(res)
+        
+        return res
     
     except Exception as e:
         return {"ERROR": f"An error occurred during analysis: {e}"}
@@ -170,25 +205,9 @@ def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
             if abs(return_pct) > highest_volatility:
                 highest_volatility = abs(return_pct)
                 comparison["most_volatile"] = company
+
+    # Debugging            
+    print("\n", "-"*10, "COMPARISON", "-"*10)
+    print(comparison)
     
     return comparison
-
-if __name__ == '__main__':
-    print("--- Testing Financial Tools ---")
-    company_to_find = "GOOGle"
-    symbol = find_ticker_symbol(company_to_find)
-    if symbol:
-        print(f"SUCCESS Search: Found ticker '{symbol}' for '{company_to_find}'.")
-        quote = get_stock_quote(symbol)
-        
-        if "ERROR" not in quote: # If get_stock_quote has ERROR or raises its exception flag
-            print(f"SUCCESS Fetch: Fetched quote for {symbol}:")
-            for key, value in quote.items():
-                if isinstance(value, float):
-                    print(f"  {key.capitalize()}: ${value:,.2f}")
-                else:
-                    print(f"  {key.capitalize()}: {value}")
-        else:
-            print(f"FAILURE: Could not get quote for {symbol}. Reason: {quote['ERROR']}")
-    else:
-        print(f"FAILURE: Could not find a ticker for '{company_to_find}'.")
