@@ -230,6 +230,10 @@ def synthesize_response(query: str, plan: dict, results: dict) -> str:
             context_parts.append(f"{step_key}: {result}")
     
     context = "\n".join(context_parts)
+
+    # Debugging
+    # print("\n", "-"*10, "CONTEXT...", "-"*10)
+    # print(context, "\n")
     
     synthesis_prompt = f"""[INST] You are a helpful financial assistant. Use the following data from multiple analysis steps to provide a comprehensive answer to the user's query.
 

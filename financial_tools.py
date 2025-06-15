@@ -109,8 +109,8 @@ def get_stock_quote(ticker_symbol: str, period: str = "1d") -> dict:
         }
 
         # Debugging
-        print("\n", "-"*10, "CURR. ANALYSIS", "-"*10)
-        print(res)
+        # print("\n", "-"*10, "CURR. ANALYSIS", "-"*10)
+        # print(res, "\n")
 
         return res
     
@@ -134,17 +134,17 @@ def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
         volumes = data['Volume']
         
         # Trend analysis
-        recent_trend = "upward" if closes.iloc[-1] > closes.iloc[-5] else "downward" # last 5 entries
+        trend = "upward" if closes.iloc[-1] > closes.iloc[0] else "downward"
         volatility = closes.std() / closes.mean() * 100
         
         # Moving averages
-        ma_short = closes.rolling(window=min(5, len(closes))).mean().iloc[-1]
-        ma_long = closes.rolling(window=min(10, len(closes))).mean().iloc[-1]
+        ma_short = closes.rolling(window=max(5, int(len(closes)*0.08))).mean().iloc[-1]
+        ma_long = closes.rolling(window=max(10, int(len(closes)*0.8))).mean().iloc[-1]
 
         res = {
             "symbol": ticker_symbol,
             "period": period,
-            "trend_direction": recent_trend,
+            "trend_direction": trend,
             "volatility_pct": volatility,
             "ma_short": ma_short,
             "ma_long": ma_long,
@@ -155,8 +155,8 @@ def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
         }
 
         # Debugging
-        print("\n", "-"*10, "HIST. ANALYSIS", "-"*10)
-        print(res)
+        # print("\n", "-"*10, "HIST. ANALYSIS", "-"*10)
+        # print(res, "\n")
         
         return res
     
@@ -206,7 +206,7 @@ def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
                 comparison["most_volatile"] = company
 
     # Debugging            
-    print("\n", "-"*10, "COMPARISON", "-"*10)
-    print(comparison)
+    # print("\n", "-"*10, "COMPARISON", "-"*10)
+    # print(comparison)
     
     return comparison
