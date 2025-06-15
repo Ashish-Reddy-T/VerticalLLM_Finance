@@ -6,9 +6,6 @@ from pathlib import Path
 #     See if ticker is mentioned in company_name
 #     """
 #     print(f"Primary Search Tool: Searching for ticker for '{company_name}'...")
-#     """
-#     DEBUGGING SHOWS THAT YFINANCE HAS A STOCK TICKER CALLED `MICROSOFT` but when you retrieve data from it you get nothing, the company microsoft has ticker 'MSFT' and to make things easy, I am just hard coding that.
-#     """
 
 #     try:
 #         ticker = yf.Ticker(company_name)
@@ -40,6 +37,12 @@ def search_yahoo_api(company_name: str) -> str | None:
     Use direct API call if direct neither of the two work!
     """
     print(f"Search Tool: Trying direct API fallback for '{company_name}'...")
+
+    # Special request for BTC-USD
+    keywords = ('btc', 'bitcoin', 'btcusd', 'usdbtc')
+    if any(keyword in company_name.lower() for keyword in keywords):
+        company_name = 'BTC-USD'
+
     # User-Agent disguises 'bot search' to 'human search' and it connects directly to Yahoo Finance's __search endpoint__
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     # HTTP Get request
@@ -66,10 +69,6 @@ def search_yahoo_api(company_name: str) -> str | None:
         }
         """
         if data.get('quotes'):
-            if company_name.lower() in (['bitcoin-usd', 'usd-bitcoin'] or 'bitcoin'): #BTC gets its result in second (BTC-USD)
-                print(f"Found symbol: {data['quotes'][1]['symbol']}") 
-                return data['quotes'][1]['symbol']
-            else:
                 print(f"Found symbol: {data['quotes'][0]['symbol']}")
                 return data['quotes'][0]['symbol']
         return None # No responses found for `company_name`
