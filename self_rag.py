@@ -1,5 +1,5 @@
 import faiss, pickle, os, re
-from sentence_transformers import SentenceTransformer, CrossEncoder, util
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from pathlib import Path
 from llama_cpp import Llama
 
@@ -66,7 +66,7 @@ Answer: [/INST]"""
         
         response = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=8,
+            max_tokens=1,
             temperature=0.0
         )
 
@@ -101,7 +101,7 @@ Answer only 'relevant', 'irrelevant', or 'partial': [/INST]"""
         
         relevance_response = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": relevance_prompt}],
-            max_tokens=8,
+            max_tokens=4,
             temperature=0.0
         )
         relevance = relevance_response['choices'][0]['message']['content'].strip().lower()
@@ -117,13 +117,13 @@ Answer only 'relevant', 'irrelevant', or 'partial': [/INST]"""
 [INST] Verify if the passage provides accurate information that directly supports answering the query. 
 
 Query: '{query}'
-Passage: '{passage[:1000]}...'
+Passage: '{passage[:800]}...'
 
 Answer only 'supported', 'not supported', or 'partial': [/INST]"""
         
         support_response = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": support_prompt}],
-            max_tokens=8,
+            max_tokens=4,
             temperature=0.0
         )
         support = support_response['choices'][0]['message']['content'].strip().lower()
@@ -187,7 +187,7 @@ Structure your response:
         
         response = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1024,
+            max_tokens=512,
             temperature=0.7
         )
 
@@ -198,6 +198,7 @@ Structure your response:
         prompt = f"[INST] {query} [/INST]"
         response = self.llm.create_chat_completion(
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=512
+            max_tokens=256
         )
+        print("\nAgent: No Self-RAG required. Using LLM knowledge for to answer.")
         return response['choices'][0]['message']['content']

@@ -14,7 +14,7 @@ Building a Vertical Large Language Model in the stock market sector:
 Agent: Loading configuration...
 Agent: Initializing Mistral 7B model...
 
-llama_init_from_model: n_ctx_per_seq (4096) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
+llama_init_from_model: n_ctx_per_seq (8192) < n_ctx_train (32768) -- the full capacity of the model will not be utilized
 ggml_metal_init: skipping kernel_get_rows_bf16                     (not supported)
 ggml_metal_init: skipping kernel_mul_mv_bf16_f32                   (not supported)
 ggml_metal_init: skipping kernel_mul_mv_bf16_f32_1row              (not supported)
@@ -36,13 +36,123 @@ ggml_metal_init: skipping kernel_cpy_bf16_f32                      (not supporte
 ggml_metal_init: skipping kernel_cpy_bf16_bf16                     (not supported)
 
 Agent: Model loaded successfully.
+Agent: Initializing Self-RAG system...
 
 ---
 🤖 Financial Agent Initialized.
 You can now ask questions about stock prices or general topics.
 Type 'exit', 'quit', or 'q' to end the session.
 ---
-You: Compare Apple and Tesla's performance over the last 3 months
+You: hi there.
+
+🤖 Agent is thinking...
+
+ ---------- INFO ----------
+{
+    "needs_tools": false,
+    "steps": []
+}
+
+This initial response is to acknowledge the user's greeting and does not require any specific tool or action. It simply sets the stage for further interactions related to financial planning and analysis.
+
+Agent: No specific tools needed. Using Self-RAG analysis for this.
+INFO: RETRIEVE0 (yes/no): no
+
+Agent: No Self-RAG required. Using LLM knowledge for to answer.
+
+--- Agent's Response ---
+Hello! How can I assist you today? 😊 If you have any questions or need help with something, feel free to ask. 😊
+
+Here are a few things I can help you with:
+
+1. Answering questions about various topics (e.g., science, math, history, literature, etc.)
+2. Providing explanations for complex concepts
+3. Helping you solve problems
+4. Generating ideas for projects or assignments
+5. Offering suggestions for books, movies, or TV shows based on your preferences
+6. Providing fun facts, trivia, and jokes
+7. And much more! Just let me know what you need. 😊
+
+If you're not sure what you need help with, feel free to ask me anything that comes to mind, and I'll do my best to assist you. 😊
+
+Enjoy your day! 😊
+------------------------
+
+You: what is x: x^2+3x+2=0
+
+🤖 Agent is thinking...
+
+ ---------- INFO ----------
+{
+    "needs_tools": false,
+    "steps": []
+}
+
+This query is not related to financial analysis, but rather a mathematical equation. To solve for x, you can use the quadratic formula: x = [-b ± sqrt(b^2 - 4ac)] / 2a. In this case, a = 1, b = 3, and c = 2. So, x = [-3 ± sqrt((3)^2 - 4*1*2)] / 2*1. The solution would be x1 = [-3 + sqrt(9 - 8)] / 2 and x2 = [-3 - sqrt(9 - 8)] / 2.
+
+Agent: No specific tools needed. Using Self-RAG analysis for this.
+INFO: RETRIEVE0 (yes/no): no
+
+Agent: No Self-RAG required. Using LLM knowledge for to answer.
+
+--- Agent's Response ---
+To find the solutions for the quadratic equation x^2 + 3x + 2 = 0, we can use the quadratic formula:
+
+x = (-b ± √(b² - 4ac)) / 2a
+
+In this case, a = 1, b = 3, and c = 2.
+
+Plugging these values into the formula, we get:
+
+x = (-3 ± √(3² - 4*1*2)) / (2*1)
+x = (-3 ± √(9 - 8)) / 2
+x = (-3 ± √1) / 2
+
+Since √1 = 1, we have two possible solutions:
+
+x1 = (-3 + 1) / 2 = -1
+x2 = (-3 - 1) / 2 = -2
+
+So the solutions for the given quadratic equation are x1 = -1 and x2 = -2.
+------------------------
+
+You: what is eps?
+
+🤖 Agent is thinking...
+
+ ---------- INFO ----------
+{
+    "needs_tools": false,
+    "steps": []
+}
+
+Explanation:
+The user is asking for the definition of EPS (Earnings Per Share). No tools are needed to provide this information. A simple explanation can be given as follows:
+
+EPS is a financial metric that measures a company's profitability by revealing how much of its earnings can be attributed to each outstanding share of common stock. It is calculated by dividing a company's net income by the number of outstanding shares of common stock. EPS is a key indicator of a company's profitability and is often used to compare the performance of different companies.
+
+Agent: No specific tools needed. Using Self-RAG analysis for this.
+INFO: RETRIEVE0 (yes/no): yes
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+INFO: RETRIEVE1 (relevant/irrelevant/partial): irrelevant
+
+--- Agent's Response ---
+The question is asking about EPS, which stands for "Earnings Per Share." This is a common financial metric that measures a company's profitability by dividing its total earnings by the number of outstanding shares of its common stock.
+
+In the provided context, the calculation of EPS is explained with a formula:
+
+- Operating profit plus depreciation plus amortization of goodwill minus Federal income tax (paid at the company’s average rate) minus cost of stock options minus “maintenance” (or essential) capital expenditures minus any income generated by unsustainable rates of return on pension funds (as of 2003, anything greater than 6.5%) and where Invested Capital is equal to: Total assets minus cash (as well as short-term investments and non-interest-bearing current liabilities) plus past accounting charges that reduced invested capital.
+
+However, it is important to note that EPS has been distorted in recent years by factors like stock-option grants and accounting gains and charges. To see how much a company is truly earning on the capital it deploys in its businesses, it is recommended to look beyond EPS to ROIC (Return on Invested Capital). This formula shows, after all legitimate expenses, what the company earns from its operating businesses and how efficiently it has used the shareholders’ money to generate that return. An ROIC of at least 10% is attractive; even 6% or 7% can be tempting if the company has good brand names, focused management, or is under a temporary cloud.
+
+In conclusion, while EPS is a useful metric for understanding a company's profitability, it is essential to consider other factors such as ROIC to gain a more comprehensive understanding of the company's financial health.
+------------------------
+
+You: compare apple's stock with google's stock over the last quarter (which is 3 months).
 
 🤖 Agent is thinking...
 
@@ -52,164 +162,34 @@ You: Compare Apple and Tesla's performance over the last 3 months
     "steps": [
         {
             "tool": "compare_stocks",
-            "action": "Compare Apple and Tesla's stock performance",
+            "action": "Compare Apple's and Google's stock performance",
             "parameters": {
-                "companies": ["Apple", "Tesla"],
+                "companies": ["Apple", "Google"],
                 "period": "3mo"
             },
-            "reasoning": "To understand the relative performance of both companies over the specified time period."
+            "reasoning": "To understand the relative stock performance of Apple and Google over the last quarter."
         }
     ]
 }
 
-Agent: Executing step 1: Compare Apple and Tesla's stock performance
-Agent: Reason: To understand the relative performance of both companies over the specified time period.
+Agent: Executing step 1: Compare Apple's and Google's stock performance
+Agent: Reason: To understand the relative stock performance of Apple and Google over the last quarter.
 Search Tool: Trying direct API fallback for 'Apple'...
 Found symbol: AAPL
 Fetch Tool: Fetching quote for 'AAPL' (period: 3mo)...
-Search Tool: Trying direct API fallback for 'Tesla'...
-Found symbol: TSLA
-Fetch Tool: Fetching quote for 'TSLA' (period: 3mo)...
+Search Tool: Trying direct API fallback for 'Google'...
+Found symbol: GOOG
+Fetch Tool: Fetching quote for 'GOOG' (period: 3mo)...
 Comparison Tool: Comparing 2 stocks over 3mo...
 
 --- Agent's Response ---
-Over the past 3 months, I have analyzed the performance of both Apple (AAPL) and Tesla (TSLA). Here's the comparison:
+Over the past three months, the performance of Apple's stock (AAPL) has been less favorable compared to Google's stock (GOOG). In particular, Google's stock has seen a return of approximately 6.52%, while Apple's stock has experienced a decline of around 6.88%.
 
-1. Stock Performance:
-   - Apple (AAPL) has seen a return of -6.88% during this period, with its current price at $196.45.
-   - Tesla (TSLA), on the other hand, has performed significantly better, delivering a return of 31.54% and currently trading at $325.31.
+It's worth noting that both stocks have shown similar levels of volatility during this period, with Apple's stock volatility being 6.88% and Google's being 6.52%.
 
-2. Volatility:
-   - Apple shows a lower volatility rate of 6.88%, indicating a relatively stable performance compared to its return.
-   - Tesla demonstrates a much higher volatility rate of 31.54%, suggesting a more unpredictable stock price movement for Tesla compared to Apple.
+As of the current date, the closing prices for Apple's stock and Google's stock were $196.45 and $175.88 respectively.
 
-In summary, Tesla has outperformed Apple over the last 3 months, delivering a much higher return. However, Tesla's performance is also more volatile compared to Apple's. It's essential to consider your investment goals and risk tolerance when deciding which stock to invest in.
-------------------------
-
-You: Show me Google's historical trends and current price
-
-🤖 Agent is thinking...
-
- ---------- INFO ----------
-{
-    "needs_tools": true,
-    "steps": [
-        {
-            "tool": "get_historical_data",
-            "action": "Get Google's historical stock data",
-            "parameters": {"ticker": "GOOGL", "period": "1y"},
-            "reasoning": "To understand the long-term trends and performance of Google's stock"
-        },
-        {
-            "tool": "get_stock_info",
-            "action": "Get current price of Google's stock",
-            "parameters": {"ticker": "GOOGL"},
-            "reasoning": "To provide the user with the most recent price of Google's stock"
-        }
-    ]
-}
-
-Agent: Executing step 1: Get Google's historical stock data
-Agent: Reason: To understand the long-term trends and performance of Google's stock
-Search Tool: Trying direct API fallback for 'GOOGL'...
-Found symbol: GOOGL
-Analysis Tool: Analyzing historical data for 'GOOGL' (period: 1y)...
-
-Agent: Executing step 2: Get current price of Google's stock
-Agent: Reason: To provide the user with the most recent price of Google's stock
-Search Tool: Trying direct API fallback for 'GOOGL'...
-Found symbol: GOOGL
-Fetch Tool: Fetching quote for 'GOOGL' (period: 1d)...
-
---- Agent's Response ---
-Based on the analysis, Google's (GOOGL) historical stock trends show a downward trend over the last year, with a total return of -0.72% during this period. The stock has experienced a volatility of 7.71% within this timeframe. The highest price recorded during this period was $205.89, while the lowest was $144.52. The average daily volume over this period was approximately 30.41 million shares.
-
-Currently, as of the latest data point (today), Google's stock is trading at $174.67. The stock opened at $172.44 today, and has seen a daily change of +1.29%. The highest and lowest prices recorded today were $177.13 and $172.39 respectively. The latest volume traded was 27.64 million shares, with an average volume of the same amount.
-
-In summary, Google's stock has shown a downward trend over the last year, but has seen a slight increase in price today. It is important to consider these trends and factors, along with other relevant information, before making any investment decisions.
-------------------------
-
-You: Analyze Amazon's stock over the past 6 months and compare it with Microsoft
-
-🤖 Agent is thinking...
-
- ---------- INFO ----------
-{
-    "needs_tools": true,
-    "steps": [
-        {
-            "tool": "get_stock_info",
-            "action": "Get Amazon's current stock data",
-            "parameters": {"company": "Amazon", "period": "1d"},
-            "reasoning": "To have the most recent data for further analysis"
-        },
-        {
-            "tool": "get_historical_data",
-            "action": "Get Amazon's stock data for the past 6 months",
-            "parameters": {"company": "Amazon", "period": "6mo"},
-            "reasoning": "To analyze Amazon's stock performance over the specified period"
-        },
-        {
-            "tool": "get_stock_info",
-            "action": "Get Microsoft's current stock data",
-            "parameters": {"company": "Microsoft", "period": "1d"},
-            "reasoning": "To have the most recent data for Microsoft"
-        },
-        {
-            "tool": "get_historical_data",
-            "action": "Get Microsoft's stock data for the past 6 months",
-            "parameters": {"company": "Microsoft", "period": "6mo"},
-            "reasoning": "To analyze Microsoft's stock performance over the specified period"
-        },
-        {
-            "tool": "compare_stocks",
-            "action": "Compare Amazon and Microsoft's stock performance",
-            "parameters": {"companies": ["Amazon", "Microsoft"], "period": "6mo"},
-            "reasoning": "To understand the relative performance of both companies' stocks over the specified period"
-        }
-    ]
-}
-
-Agent: Executing step 1: Get Amazon's current stock data
-Agent: Reason: To have the most recent data for further analysis
-Search Tool: Trying direct API fallback for 'Amazon'...
-Found symbol: AMZN
-Fetch Tool: Fetching quote for 'AMZN' (period: 1d)...
-
-Agent: Executing step 2: Get Amazon's stock data for the past 6 months
-Agent: Reason: To analyze Amazon's stock performance over the specified period
-Search Tool: Trying direct API fallback for 'Amazon'...
-Found symbol: AMZN
-Analysis Tool: Analyzing historical data for 'AMZN' (period: 6mo)...
-
-Agent: Executing step 3: Get Microsoft's current stock data
-Agent: Reason: To have the most recent data for Microsoft
-Search Tool: Trying direct API fallback for 'Microsoft'...
-Found symbol: MSFT
-Fetch Tool: Fetching quote for 'MSFT' (period: 1d)...
-
-Agent: Executing step 4: Get Microsoft's stock data for the past 6 months
-Agent: Reason: To analyze Microsoft's stock performance over the specified period
-Search Tool: Trying direct API fallback for 'Microsoft'...
-Found symbol: MSFT
-Analysis Tool: Analyzing historical data for 'MSFT' (period: 6mo)...
-
-Agent: Executing step 5: Compare Amazon and Microsoft's stock performance
-Agent: Reason: To understand the relative performance of both companies' stocks over the specified period
-Search Tool: Trying direct API fallback for 'Amazon'...
-Found symbol: AMZN
-Fetch Tool: Fetching quote for 'AMZN' (period: 6mo)...
-Search Tool: Trying direct API fallback for 'Microsoft'...
-Found symbol: MSFT
-Fetch Tool: Fetching quote for 'MSFT' (period: 6mo)...
-Comparison Tool: Comparing 2 stocks over 6mo...
-
---- Agent's Response ---
-Over the past 6 months, Amazon's stock performance has shown a downward trend with a total return of -8.94%. The stock's volatility, measured as a percentage, is 8.91%. The highest price recorded during this period was $242.06, while the lowest was $167.32. The average daily volume was approximately 43.79 million shares. As for the recent 1-day data, Amazon's stock closed at $212.10, marking a 1.02% increase from the previous day's close.
-
-Comparing Amazon's performance with Microsoft over the same period, Microsoft has shown an upward trend with a total return of 5.58%. Microsoft's stock's volatility, measured as a percentage, is 7.47%. The highest price recorded during this period was $478.87, while the lowest was $353.91. The average daily volume was approximately 23 million shares. In the recent 1-day data, Microsoft's stock closed at $474.96, marking a -0.30% decrease from the previous day's close.
-
-Based on the analysis, Microsoft has outperformed Amazon over the past 6 months. Additionally, Microsoft's stock has shown lower volatility compared to Amazon during the same period.
+In summary, Google's stock has outperformed Apple's stock over the last quarter, with a higher return percentage. However, both stocks have exhibited similar levels of volatility.
 ------------------------
 
 You: exit

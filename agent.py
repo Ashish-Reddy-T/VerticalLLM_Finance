@@ -69,7 +69,7 @@ def handle_query(query: str) -> str:
     """
     
     if not execution_plan['needs_tools'] or not execution_plan['steps']:
-        print("Agent: No specific tools needed. Using Self-RAG analysis for this.\n")
+        print("\nAgent: No specific tools needed. Using Self-RAG analysis for this.")
         return self_rag.generate_with_rag(query)    
       
     # Step 2: EXECUTE - Run the planned steps
@@ -115,7 +115,7 @@ Respond in this exact JSON format:
     ]
 }}
 
-If no tools are needed, set "needs_tools": false and "steps": [] and end your response. 
+If no tools are needed, set "needs_tools": false and "steps": []
 
 User Query: "{query}"
 Plan: [/INST]"""
@@ -141,7 +141,8 @@ Plan: [/INST]"""
             plan = json.loads(json_text) # Get dict from json
         else:
             plan = {"needs_tools": False, "steps": []}
-    except:
+    except Exception as e:
+        print(f'ERROR: {e}')
         plan = {"needs_tools": False, "steps": []}
     
     return plan
