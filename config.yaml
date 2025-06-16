@@ -5,6 +5,7 @@ model:
 api_keys:
   alpha_vantage: "HOUB736QBS0WNLFS"
   finnhub: "d14t6ghr01qop9mfct1gd14t6ghr01qop9mfct20"
+  news: "553ff970ffbc4542b1502e8df27cba6c"
 
 # tickers:
 #   AAPL: "Apple Inc."

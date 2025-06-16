@@ -5,6 +5,8 @@ LangChain
 langchain-community
 langchain-core
 langchain_experimental
-sentence-transformers
 requests
 json5
+PyMuPDF
+sentence-transformers
+faiss-cpu

@@ -2,7 +2,5 @@ __pycache__/
 *.DS_Store
 *.pyc
 fin_slm
-chart_utils.py
-charts/
-data_fetch.py
-model_loader.py
+fundamental_tools.py
+sample.ipynb

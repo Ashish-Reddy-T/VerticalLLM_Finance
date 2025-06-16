@@ -1,27 +1,28 @@
 import yaml
 from pathlib import Path
 from llama_cpp import Llama
-from financial_tools import search_yahoo_api, get_stock_quote, get_historical_analysis, compare_stock_data # find_ticker_symbol
 
-def _load_config():
-    config_path = Path(__file__).parent / "config.yaml"
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+from utils import get_config
+from financial_tools import search_yahoo_api, get_stock_quote, get_historical_analysis, compare_stock_data
+from self_rag import SelfRAG
 
 # Initialize LLM
 print("Agent: Loading configuration...")
-config_file = _load_config()
+config_file = get_config()
 model_path = config_file.get('model', {}).get('path') # Modify this if deploying! (to include models dir)
 
 print("Agent: Initializing Mistral 7B model...\n")
 llm = Llama(
     model_path=model_path,
     n_gpu_layers=-1,                # Offload all layers to the GPU (my mac has 14 GPU cores)
-    n_ctx=4096,                     # Set context window size
+    n_ctx=8192,                     # Set context window size
     chat_format="mistral-instruct", # Use the correct chat template for this model
     verbose=False                   # Keep the output clean
 )
 print("\nAgent: Model loaded successfully.")
+
+print("Agent: Initializing Self-RAG system...")
+self_rag = SelfRAG(llm)
 
 # Define the Tools the Agent could Use
 tools = {
@@ -67,10 +68,9 @@ def handle_query(query: str) -> str:
     }
     """
     
-    if not execution_plan['steps']:
-        # No tools needed
-        print("Agent: No specific tools needed. Answering directly.")
-        return generate_direct_response(query)
+    if not execution_plan['needs_tools'] or not execution_plan['steps']:
+        print("Agent: No specific tools needed. Using Self-RAG analysis for this.\n")
+        return self_rag.generate_with_rag(query)    
       
     # Step 2: EXECUTE - Run the planned steps
     results = {}
@@ -115,14 +115,14 @@ Respond in this exact JSON format:
     ]
 }}
 
-If no tools are needed, set "needs_tools": false and "steps": []
+If no tools are needed, set "needs_tools": false and "steps": [] and end your response. 
 
 User Query: "{query}"
 Plan: [/INST]"""
 
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": planning_prompt}],
-        max_tokens=400,
+        max_tokens=512,
         temperature=0.0
     )
 
@@ -249,16 +249,7 @@ Provide a clear, comprehensive response that synthesizes insights from all the a
     
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": synthesis_prompt}],
-        max_tokens=400,
+        max_tokens=512,
         temperature=0.7
-    )
-    return response['choices'][0]['message']['content']
-
-def generate_direct_response(query: str) -> str:
-    """Generate response for queries that don't need tools."""
-    fallback_prompt = f"[INST] {query} [/INST]"
-    response = llm.create_chat_completion(
-        messages=[{"role": "user", "content": fallback_prompt}],
-        max_tokens=256
     )
     return response['choices'][0]['message']['content']

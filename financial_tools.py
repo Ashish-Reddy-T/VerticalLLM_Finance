@@ -40,8 +40,10 @@ def search_yahoo_api(company_name: str) -> str | None:
 
     # Special request for BTC-USD
     keywords = ('btc', 'bitcoin', 'btcusd', 'usdbtc')
-    if any(keyword in company_name.lower() for keyword in keywords):
-        company_name = 'BTC-USD'
+    for keyword in keywords:
+        if company_name.lower() in keyword:
+            company_name = 'BTC-USD'
+            break
 
     # User-Agent disguises 'bot search' to 'human search' and it connects directly to Yahoo Finance's __search endpoint__
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
