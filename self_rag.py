@@ -200,5 +200,5 @@ Structure your response:
             messages=[{"role": "user", "content": prompt}],
             max_tokens=256
         )
-        print("\nAgent: No Self-RAG required. Using LLM knowledge for to answer.")
+        print("\nAgent: No Self-RAG required. Using LLM knowledge to answer.")
         return response['choices'][0]['message']['content']
