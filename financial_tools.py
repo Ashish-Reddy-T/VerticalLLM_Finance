@@ -1,43 +1,10 @@
 import yfinance as yf, requests, talib, pandas as pd, time
-from typing import Dict, List, Tuple
-
-# def find_ticker_symbol(company_name: str) -> str | None: 
-#     """
-#     See if ticker is mentioned in company_name
-#     """
-#     print(f"Primary Search Tool: Searching for ticker for '{company_name}'...")
-
-#     try:
-#         ticker = yf.Ticker(company_name)
-#         if ticker.info and 'symbol' in ticker.info:
-#             return ticker.info['symbol']
-#         raise Exception("`yfinance.Ticker` found no info.") # HTTP Error 404: 
-
-#     except Exception:
-#         # If ticker=yf.Ticker fails, execute secondary search
-#         return search_by_stock_list(company_name)
-
-# def search_by_stock_list(company_name: str) -> str | None:
-#     """
-#     Try to find ticker from SEC Trustworthy List
-#     """
-#     print(f"Secondary Search Tool: Searching for ticker from SEC JSON list for '{company_name}'...")
-#     path = Path(__file__).parent / "stock_list.json"
-#     with open(path, 'r') as f:
-#         data = json.load(f)
-    
-#     for entry in data.values(): # {'cik_str': 789019, 'ticker': 'MSFT', 'title': 'MICROSOFT CORP'} --> entry
-#         if company_name.lower() in entry['title'].lower():
-#             return entry['ticker']
-#     # Tertiary search
-#     return search_yahoo_api(company_name)
+from typing import Dict, List
     
 def search_yahoo_api(company_name: str) -> str | None:
     """
     Use direct API call if direct neither of the two work!
     """
-    print(f"Search Tool: Trying direct API fallback for '{company_name}'...")
-
     # Special request for BTC-USD
     keywords = ('btc', 'bitcoin', 'btcusd', 'usdbtc')
     for keyword in keywords:
@@ -71,7 +38,7 @@ def search_yahoo_api(company_name: str) -> str | None:
         }
         """
         if data.get('quotes'):
-                print(f"Found symbol: {data['quotes'][0]['symbol']}")
+                print(f"Agent: Found symbol: {data['quotes'][0]['symbol']}")
                 return data['quotes'][0]['symbol']
         return None # No responses found for `company_name`
     
@@ -83,7 +50,7 @@ def get_stock_quote(ticker_symbol: str, period: str = "1d") -> dict:
     """
     Fetches stock quote data for a given ticker symbol and period.
     """
-    print(f"Fetch Tool: Fetching quote for '{ticker_symbol}' (period: {period})...")
+    print(f"Agent: Fetching quote for '{ticker_symbol}' (period: {period})...")
     try:
         ticker = yf.Ticker(ticker_symbol)
         data = ticker.history(period=period)
@@ -123,7 +90,7 @@ def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
     """
     Provides historical analysis including trends and patterns.
     """
-    print(f"Analysis Tool: Analyzing historical data for '{ticker_symbol}' (period: {period})...")
+    print(f"Agent: Analyzing historical data for '{ticker_symbol}' (period: {period})...")
     try:
         ticker = yf.Ticker(ticker_symbol)
         data = ticker.history(period=period)
@@ -169,7 +136,7 @@ def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
     """
     Compares multiple stocks' performance.
     """
-    print(f"Comparison Tool: Comparing {len(stock_results)} stocks over {period}...")
+    print(f"Agent: Comparing {len(stock_results)} stocks over {period}...")
     
     if not stock_results:
         return {"ERROR": "No valid stock data to compare"}
@@ -363,13 +330,7 @@ def analyze_pattern_confluence(multi_timeframe_data: Dict) -> Dict:
 if __name__ == "__main__":
     start_time = time.time()
     multi_data = get_multi_timeframe_data('BTC-USD', period='1mo')
-    # for key, value in multi_data.items():
-    #     print(key, "-"*10)
-    #     for key1, value1 in value.items():
-    #         print(f"{key1}: {value1}")
-
     confluenze_analysis = analyze_pattern_confluence(multi_data)
     for key, value in confluenze_analysis.items():
         print(f"{key}: {value}")
-    
     print("Time taken:", time.time()-start_time)
