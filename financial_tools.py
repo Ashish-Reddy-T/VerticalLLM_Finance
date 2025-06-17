@@ -1,5 +1,5 @@
-import yfinance as yf, requests, json
-from pathlib import Path
+import yfinance as yf, requests, talib, pandas as pd, time
+from typing import Dict, List, Tuple
 
 # def find_ticker_symbol(company_name: str) -> str | None: 
 #     """
@@ -212,3 +212,164 @@ def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
     # print(comparison)
     
     return comparison
+
+def get_multi_timeframe_data(symbol: str, timeframes: List[str] = ['15m', '1hr', '4hr', '1d'], period: str = '3d') -> Dict:
+    """
+    Fetch candlestick data across multiple timeframes
+    """
+    multi_data = {}
+
+    for tf in timeframes:
+        yf_interval = {
+            '15m': '15m', 
+            '1h': '1h', 
+            '4h': '4h', 
+            '1d': '1d'
+        }.get(tf, '1h')
+
+        data = yf.Ticker(symbol).history(period=period, interval=yf_interval)
+        if not data.empty:
+            multi_data[tf] = {
+                'ohlc': data,
+                'patterns': detect_candlestick_patterns(data),
+                'timeframe': tf
+            }
+    
+    return multi_data
+
+def detect_candlestick_patterns(data: pd.DataFrame) -> Dict:
+    """
+    Detect multiple candlestick patterns using TA-lib
+    Returns pattern signals with confidence scores
+    """ 
+    patterns = {}
+
+    open_prices = data['Open'].values
+    high_prices = data['High'].values
+    low_prices = data['Low'].values
+    close_prices = data['Close'].values
+    
+    # All values for reliability and profit potential are based on stats!
+    patterns['inverted_hammer'] = {
+        'signal': talib.CDLINVERTEDHAMMER(open=open_prices, high=high_prices, low=low_prices, close=close_prices),
+        'reliability': 0.6,        
+        'profit_potential': 1.12    
+    }
+    patterns['bearish_marubozu'] = {
+        'signal': talib.CDLMARUBOZU(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.561,
+        'profit_potential': 0.80
+    }
+    patterns['gravestone_doji'] = {
+        'signal': talib.CDLGRAVESTONEDOJI(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.57,
+        'profit_potential': 0.65
+    }
+    engulfing_signal = talib.CDLENGULFING(open_prices, high_prices, low_prices, close_prices)
+    patterns['bearish_engulfing'] = {
+        'signal': [s if s < 0 else 0 for s in engulfing_signal], # Keep only negative values
+        'reliability': 0.57,
+        'profit_potential': 0.61
+    }
+    patterns['bullish_engulfing'] = {
+        'signal': [s if s > 0 else 0 for s in engulfing_signal], # Keep only positive values
+        'reliability': 0.57,
+        'profit_potential': 0.58
+    }
+    patterns['shooting_star'] = {
+        'signal': talib.CDLSHOOTINGSTAR(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.571,
+        'profit_potential': 0.56
+    }
+    patterns['hammer'] = {
+        'signal': talib.CDLHAMMER(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.54,
+        'profit_potential': 0.52
+    }
+    patterns['hanging_man'] = {
+        'signal': talib.CDLHANGINGMAN(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.54,
+        'profit_potential': 0.48
+    }
+    patterns['morning_star'] = {
+        'signal': talib.CDLMORNINGSTAR(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.54,
+        'profit_potential': 0.45
+    }
+    patterns['evening_star'] = {
+        'signal': talib.CDLEVENINGSTAR(open_prices, high_prices, low_prices, close_prices),
+        'reliability': 0.53,
+        'profit_potential': 0.42
+    }
+
+    return patterns
+
+def analyze_pattern_confluence(multi_timeframe_data: Dict) -> Dict:
+    """
+    Analyze pattern confluence across timeframes
+    Higher confluence = stronger signal
+    """
+    confluence_analysis = {
+        'bullish_signals': 0,
+        'bearish_signals': 0,          
+        'confluence_score': 0,          # Total signals (bullish + bearish)
+        'recommendation': 'NEUTRAL',    # Whether bullish or bearish is higher to get BUY or SELL
+        'confidence': 0,                # If BUY, bullish_signals/total_signals
+        'detected_patterns': []         # Patterns etc.
+    }
+
+    timeframe_weights = {'1d': 0.40, '4h': 0.35, '1h': 0.15, '15m': 0.10}
+
+    for tf, data in multi_timeframe_data.items():
+        patterns = data['patterns']           # Gives you candlestick patterns function's output
+        weight = timeframe_weights.get(tf, 0.1)
+        
+        for pattern_name, pattern_data in patterns.items():
+            latest_signal = pattern_data['signal'][-1] if len(pattern_data['signal']) > 0 else 0
+            
+            if latest_signal != 0:  # Pattern detected
+                reliability = pattern_data['reliability']
+                signal_strength = abs(latest_signal) / 100 * reliability * weight
+                
+                confluence_analysis['detected_patterns'].append({
+                    'pattern': pattern_name,
+                    'timeframe': tf,
+                    'signal': latest_signal,
+                    'reliability': reliability,
+                    'strength': signal_strength
+                })
+                
+                if latest_signal > 0:  # Bullish
+                    confluence_analysis['bullish_signals'] += signal_strength
+                else:                   # Bearish
+                    confluence_analysis['bearish_signals'] += signal_strength
+    
+    # Calculate overall confluence
+    total_signals = confluence_analysis['bullish_signals'] + confluence_analysis['bearish_signals']
+    
+    if total_signals > 0:
+        if confluence_analysis['bullish_signals'] > confluence_analysis['bearish_signals']:
+            confluence_analysis['recommendation'] = 'BUY'
+            confluence_analysis['confidence'] = confluence_analysis['bullish_signals'] / total_signals
+        else:
+            confluence_analysis['recommendation'] = 'SELL'  
+            confluence_analysis['confidence'] = confluence_analysis['bearish_signals'] / total_signals
+        
+        confluence_analysis['confluence_score'] = total_signals
+    
+    return confluence_analysis
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    multi_data = get_multi_timeframe_data('BTC-USD', period='1mo')
+    # for key, value in multi_data.items():
+    #     print(key, "-"*10)
+    #     for key1, value1 in value.items():
+    #         print(f"{key1}: {value1}")
+
+    confluenze_analysis = analyze_pattern_confluence(multi_data)
+    for key, value in confluenze_analysis.items():
+        print(f"{key}: {value}")
+    
+    print("Time taken:", time.time()-start_time)
