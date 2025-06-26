@@ -46,7 +46,7 @@ tools = {
     },
     "comprehensive_analysis": {
         "description": "Complete analysis combining fundamentals, technicals, and candlestick patterns for trading decisions.",
-        "function": "comprehensive_analysis"
+        "function": "execute_comprehensive_analysis"
     }
 }   
 
@@ -67,7 +67,6 @@ def handle_query(query: str) -> str:
     results = {}
     for i, step in enumerate(execution_plan['steps']):
         print(f"\nAgent: Executing step {i+1}: {step['action']}")
-        # print(f"Agent: Reason: {step['reasoning']}")
 
         step_result = execute_tool_step(step, results) 
         results[f"step_{i+1}"] = step_result
@@ -99,8 +98,8 @@ QUERY ANALYSIS GUIDELINES:
 
 For each step, specify:
 1. The tool to use
-2. The specific parameters needed  
-3. Why this step is necessary
+2. The description of the query
+3. The specific parameters needed  
 
 Respond in this exact JSON format:
 {{
@@ -110,7 +109,6 @@ Respond in this exact JSON format:
             "tool": "tool_name",
             "action": "brief description",
             "parameters": {{"param1": "value1"}},
-            "reasoning": "why this step is needed"
         }}
     ]
 }}
@@ -206,12 +204,17 @@ def execute_historical_tool(company: str, period: str = '1mo') -> dict:
     if not company:
         return {"ERROR": "No company specified"}
     
-    symbol = search_yahoo_api(company)
-    if not symbol:
-        return {"ERROR": f"Could not find ticker for: {company}"}
-    
-    return get_historical_analysis(symbol, period)
+    companies = [company] if not isinstance(company, list) else company
 
+    results = {}
+    for company in companies:
+        symbol = search_yahoo_api(company)
+        if not symbol:
+            return {"ERROR": f"Could not find ticker for: {company}"}
+        results[company] = get_historical_analysis(symbol, period)
+    
+    return results
+    
 def execute_comparison_tool(companies: list, period: str = '1mo') -> dict:
     """Compare multiple companies."""
     if not companies:
@@ -242,12 +245,13 @@ def execute_candlestick_analysis(company: str, timeframes: list = ['15m', '1h', 
         try:
             print(f"Agent: Analyzing candlestick patterns for {symbol}")
 
-            multi_data = get_multi_timeframe_data(symbol=symbol, timeframes=timeframes, period=period)
+            multi_data = get_multi_timeframe_data(symbol=symbol, timeframes=timeframes)
             if not multi_data:
                 return {"ERROR": f"No candlestick data available for {symbol}"}
-
             confluence = analyze_pattern_confluence(multi_data)
+            print(f"INFO: Risk Reward: {confluence}")
             risk_reward = calculate_risk_reward_ratio(multi_data, confluence)
+            print(f"INFO: Risk Reward: {risk_reward}")
 
             results[company] = {
                 "symbol": symbol,
@@ -340,7 +344,6 @@ def calculate_risk_reward_ratio(multi_data: dict, confluence: dict) -> dict:
     """
     Calculate risk-reward based on pattern analysis and support/resistance
     """
-    # Use daily timeframe for support/resistance levels
     daily_data = multi_data.get('1d', {}).get('ohlc')
     
     if daily_data is None or daily_data.empty:
@@ -363,7 +366,7 @@ def calculate_risk_reward_ratio(multi_data: dict, confluence: dict) -> dict:
         potential_profit = current_price - target
         potential_loss = stop_loss - current_price
     else:
-        return {"recommendation": "NEUTRAL", "reason": "No clear directional bias"}
+        return {"recommendation": "HOLD", "reason": "No clear directional bias"}
     
     risk_reward_ratio = potential_profit / potential_loss if potential_loss > 0 else 0
     

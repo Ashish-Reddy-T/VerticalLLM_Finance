@@ -6,11 +6,17 @@ def search_yahoo_api(company_name: str) -> str | None:
     Use direct API call if direct neither of the two work!
     """
     # Special request for BTC-USD
-    keywords = ('btc', 'bitcoin', 'btcusd', 'usdbtc')
-    for keyword in keywords:
-        if company_name.lower() in keyword:
-            company_name = 'BTC-USD'
-            break
+    # print("OKay")
+    # if isinstance(company_name, list):
+    #     company_name = company_name[0]
+    
+    # print(company_name)
+    if isinstance(company_name, str):
+        keywords = ('btc', 'bitcoin', 'btcusd', 'usdbtc')
+        for keyword in keywords:
+            if company_name.lower() in keyword:
+                company_name = 'BTC-USD'
+                break
 
     # User-Agent disguises 'bot search' to 'human search' and it connects directly to Yahoo Finance's __search endpoint__
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
@@ -180,27 +186,45 @@ def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
     
     return comparison
 
-def get_multi_timeframe_data(symbol: str, timeframes: List[str] = ['15m', '1hr', '4hr', '1d'], period: str = '3d') -> Dict:
+def get_multi_timeframe_data(symbol: str, timeframes: List[str] = ['15m', '1h', '4h', '1d']) -> Dict:
     """
     Fetch candlestick data across multiple timeframes
     """
     multi_data = {}
 
-    for tf in timeframes:
-        yf_interval = {
-            '15m': '15m', 
-            '1h': '1h', 
-            '4h': '4h', 
-            '1d': '1d'
-        }.get(tf, '1h')
+    fetch_map = {
+        '15m': '15m',
+        '1h': '1h',
+        '4h': '4h', 
+        '1d': '1d'
+    }
 
-        data = yf.Ticker(symbol).history(period=period, interval=yf_interval)
-        if not data.empty:
-            multi_data[tf] = {
-                'ohlc': data,
-                'patterns': detect_candlestick_patterns(data),
-                'timeframe': tf
-            }
+    period_map = {
+        '15m': '60d',
+        '1h': '730d',
+        '4h': '730d',
+        '1d': '10y'
+    }
+
+    for tf in timeframes:
+        yf_interval = fetch_map.get(tf)
+        fetch_period = period_map.get(tf, '10y')
+
+        if not yf_interval:
+            print(f"WARNING: Timeframe '{tf}' is not supported. Skipping.")
+            continue
+
+        data = yf.Ticker(symbol).history(period=fetch_period, interval=yf_interval)
+
+        if data.empty:
+            print(f"WARNING: No data returned for symbol '{symbol}' with interval '{yf_interval}'.")
+            continue
+
+        multi_data[tf] = {
+            'ohlc': data,
+            'patterns': detect_candlestick_patterns(data),
+            'timeframe': tf
+        }
     
     return multi_data
 
@@ -282,18 +306,23 @@ def analyze_pattern_confluence(multi_timeframe_data: Dict) -> Dict:
         'confluence_score': 0,          # Total signals (bullish + bearish)
         'recommendation': 'NEUTRAL',    # Whether bullish or bearish is higher to get BUY or SELL
         'confidence': 0,                # If BUY, bullish_signals/total_signals
-        'detected_patterns': []         # Patterns etc.
+        'detected_patterns': [],         # Patterns etc.
+        'reasoning': "No significant patterns detected." # For clarity
     }
+
+    min_confluence_score = 0.15
 
     timeframe_weights = {'1d': 0.40, '4h': 0.35, '1h': 0.15, '15m': 0.10}
 
     for tf, data in multi_timeframe_data.items():
-        patterns = data['patterns']           # Gives you candlestick patterns function's output
-        weight = timeframe_weights.get(tf, 0.1)
-        
+        patterns = data['patterns']           
+        weight = timeframe_weights.get(tf)
+
+        if not weight:
+            print(f"WARNING: Weight not assigned for tf: {tf}; Skipping")
+            continue
         for pattern_name, pattern_data in patterns.items():
             latest_signal = pattern_data['signal'][-1] if len(pattern_data['signal']) > 0 else 0
-            
             if latest_signal != 0:  # Pattern detected
                 reliability = pattern_data['reliability']
                 signal_strength = abs(latest_signal) / 100 * reliability * weight
@@ -308,29 +337,36 @@ def analyze_pattern_confluence(multi_timeframe_data: Dict) -> Dict:
                 
                 if latest_signal > 0:  # Bullish
                     confluence_analysis['bullish_signals'] += signal_strength
-                else:                   # Bearish
-                    confluence_analysis['bearish_signals'] += signal_strength
-    
+                else:                  # Bearish
+                    confluence_analysis['bearish_signals'] += signal_strength    
     # Calculate overall confluence
     total_signals = confluence_analysis['bullish_signals'] + confluence_analysis['bearish_signals']
     
     if total_signals > 0:
         if confluence_analysis['bullish_signals'] > confluence_analysis['bearish_signals']:
-            confluence_analysis['recommendation'] = 'BUY'
+            preliminary_recommendation = 'BUY'
             confluence_analysis['confidence'] = confluence_analysis['bullish_signals'] / total_signals
         else:
-            confluence_analysis['recommendation'] = 'SELL'  
+            preliminary_recommendation = 'SELL'
             confluence_analysis['confidence'] = confluence_analysis['bearish_signals'] / total_signals
         
         confluence_analysis['confluence_score'] = total_signals
-    
+
+    if confluence_analysis['confluence_score'] >= min_confluence_score:
+            confluence_analysis['recommendation'] = preliminary_recommendation
+            confluence_analysis['reasoning'] = f"The confluence score of {total_signals:.3f} meets the minimum threshold of {min_confluence_score}. The recommendation is driven by the stronger {preliminary_recommendation.lower()} signals."
+    else:
+        # If the score is too low, override the recommendation to HOLD/NEUTRAL.
+        confluence_analysis['recommendation'] = 'HOLD'
+        confluence_analysis['reasoning'] = f"Signal strength ({total_signals:.3f}) is below the required conviction threshold of {min_confluence_score}. Waiting for a stronger signal."
+        confluence_analysis['confidence'] = 0 # Reset confidence as we are not making a directional bet
+
     return confluence_analysis
 
 
 if __name__ == "__main__":
     start_time = time.time()
-    multi_data = get_multi_timeframe_data('BTC-USD', period='1mo')
+    multi_data = get_multi_timeframe_data('NVDA')
     confluenze_analysis = analyze_pattern_confluence(multi_data)
-    for key, value in confluenze_analysis.items():
-        print(f"{key}: {value}")
+    print(confluenze_analysis)
     print("Time taken:", time.time()-start_time)
