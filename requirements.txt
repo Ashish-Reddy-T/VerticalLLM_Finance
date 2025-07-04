@@ -11,3 +11,5 @@ PyMuPDF
 sentence-transformers
 faiss-cpu
 TA-Lib
+textblob
+PyYAML

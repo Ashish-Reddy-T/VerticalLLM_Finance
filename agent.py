@@ -3,7 +3,7 @@ from llama_cpp import Llama
 from utils import get_config
 from financial_tools import (
     search_yahoo_api, 
-    get_stock_quote, get_historical_analysis, compare_stock_data,
+    get_stock_quote, get_historical_analysis, compare_stock_data, get_news_sentiment,
     get_multi_timeframe_data, analyze_pattern_confluence
 )
 from self_rag import SelfRAG
@@ -249,9 +249,9 @@ def execute_candlestick_analysis(company: str, timeframes: list = ['15m', '1h', 
             if not multi_data:
                 return {"ERROR": f"No candlestick data available for {symbol}"}
             confluence = analyze_pattern_confluence(multi_data)
-            print(f"INFO: Risk Reward: {confluence}")
+            # print(f"\nINFO: Risk Reward: {confluence}")
             risk_reward = calculate_risk_reward_ratio(multi_data, confluence)
-            print(f"INFO: Risk Reward: {risk_reward}")
+            # print(f"INFO: Risk Reward: {risk_reward}\n")
 
             results[company] = {
                 "symbol": symbol,
@@ -279,12 +279,10 @@ def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict
     
     try:
         print(f"Agent: Executing comprehensive analysis for {company}...")
-        
-        # Get basic fundamental data
-        fundamental_data = execute_historical_tool(company, '1y')
-        
-        # Get candlestick technical analysis  
+
+        fundamental_data = execute_historical_tool(company, '3mo')
         technical_data = execute_candlestick_analysis(company)
+        sentiment_data = get_news_sentiment(company, days_back=7)
         
         # Combine analyses with weighting
         analysis = {
@@ -292,15 +290,16 @@ def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict
             "analysis_type": "comprehensive",
             "fundamental_analysis": fundamental_data,
             "technical_analysis": technical_data,
+            "sentiment_analysis": sentiment_data,
             "combined_recommendation": None,
             "confidence_score": 0,
             "reasoning": []
         }
         
-        # Calculate combined recommendation (implement your weighting logic)
+        # Weights: 20% sentiment, 30% fundamental, 50% technical
         technical_weight = 0.50
         fundamental_weight = 0.30
-        # Note: sentiment analysis (20%) (later)
+        sentiment_weight = 0.20
         
         combined_score = 0
         reasoning = []
@@ -323,17 +322,27 @@ def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict
             else:
                 combined_score -= fundamental_weight * 0.6
                 reasoning.append("Fundamental trend is downward")
+
+        # Sentiment analysis contribution (20%)
+        if sentiment_data and "sentiment_score" in sentiment_data:
+            sentiment_signal = sentiment_data["sentiment_score"] * sentiment_data["confidence"]
+            combined_score += sentiment_weight * sentiment_signal
         
         # Determine final recommendation
-        if combined_score > 0.2:
+        if combined_score > 0.1:
             analysis["combined_recommendation"] = "BUY"
-        elif combined_score < -0.2:
+        elif combined_score < -0.1:
             analysis["combined_recommendation"] = "SELL"
         else:
             analysis["combined_recommendation"] = "HOLD"
         
         analysis["confidence_score"] = abs(combined_score)
         analysis["reasoning"] = reasoning
+
+        print()
+        for key, value in analysis.items():
+            print(f"{key}: {value}")
+        print()
         
         return analysis
         

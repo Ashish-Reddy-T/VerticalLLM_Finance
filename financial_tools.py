@@ -1,5 +1,14 @@
-import yfinance as yf, requests, talib, pandas as pd, time
+import yfinance as yf, requests, talib, pandas as pd, time, yaml
+from textblob import TextBlob
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List
+
+def load_config():
+    """Load configuration from config.yaml"""
+    config_path = Path(__file__).parent / "config.yaml"
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
     
 def search_yahoo_api(company_name: str) -> str | None:
     """
@@ -363,10 +372,120 @@ def analyze_pattern_confluence(multi_timeframe_data: Dict) -> Dict:
 
     return confluence_analysis
 
+def get_news_sentiment(company_name: str, days_back: int = 7) -> Dict:
+    """
+    Fetch recent news and analyze sentiment using NewsAPI
+    Returns sentiment scores and news summary
+    """
+    try:
+        config = load_config()
+        api_key = config.get('api_keys').get('news')
+        
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        
+        # NewsAPI endpoint
+        url = "https://newsapi.org/v2/everything"
+        params = {
+            'q': f'"{company_name}" OR "{company_name} stock" OR "{company_name} earnings"',
+            'from': start_date.strftime('%Y-%m-%d'),
+            'to': end_date.strftime('%Y-%m-%d'),
+            'sortBy': 'relevancy',
+            'language': 'en',
+            'pageSize': 50,
+            'apiKey': api_key
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        
+        news_data = response.json()
+        articles = news_data.get('articles', [])
+        
+        if not articles:
+            return {
+                "sentiment_score": 0.0,
+                "sentiment_label": "NEUTRAL",
+                "confidence": 0.0,
+                "articles_analyzed": 0,
+                "news_summary": "No recent news found"
+            }
+        
+        # Analyze sentiment for each article
+        sentiments = []
+        
+        for article in articles[:20]:  # Limit to top 20
+            title = article.get('title', '')
+            description = article.get('description', '')
+            text = f"{title}. {description}" if description else title
+            
+            if text and len(text.strip()) > 10:
+                result = get_sentiment(text)
+                sentiments.append({
+                    'score': result["score"],
+                    'label': result["label"],
+                    'confidence': result["confidence"]
+                })
+
+        if not sentiments:
+            return {
+                "sentiment_score": 0.0,
+                "sentiment_label": "NEUTRAL",
+                "confidence": 0.0,
+                "articles_analyzed": 0
+            }
+        
+        # Calculate overall sentiment
+        avg_sentiment = sum(s['score'] * s['confidence'] for s in sentiments) / sum(s['confidence'] for s in sentiments)
+        
+        # Determine label and confidence
+        if avg_sentiment > 0.1:
+            sentiment_label = "POSITIVE"
+            confidence = min(avg_sentiment * 2, 1.0)
+        elif avg_sentiment < -0.1:
+            sentiment_label = "NEGATIVE"
+            confidence = min(abs(avg_sentiment) * 2, 1.0)
+        else:
+            sentiment_label = "NEUTRAL"
+            confidence = 1.0 - abs(avg_sentiment) * 2
+        
+        return {
+            "sentiment_score": avg_sentiment,
+            "sentiment_label": sentiment_label,
+            "confidence": max(confidence, 0.1),
+            "articles_analyzed": len(sentiments)
+        }
+        
+    except Exception as e:
+        return {
+            "sentiment_score": 0.0,
+            "sentiment_label": "NEUTRAL", 
+            "confidence": 0.0,
+            "articles_analyzed": 0,
+            "error": str(e)
+        }
+
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+finbert_ckpt = "yiyanghkust/finbert-tone"
+tokenizer = AutoTokenizer.from_pretrained(finbert_ckpt)
+model = AutoModelForSequenceClassification.from_pretrained(finbert_ckpt)
+
+labels = {0: 'neutral', 1: 'positive', 2: 'negative'}
+
+def get_sentiment(text):
+    inputs = tokenizer(text, return_tensors='pt', truncation=True, max_length=512)
+    with torch.no_grad():
+        logits = model(**inputs).logits
+    probs = torch.nn.functional.softmax(logits, dim=-1)[0]
+    pred = torch.argmax(probs).item()
+    return {
+        "label": labels[pred],
+        "confidence": round(probs[pred].item(), 3),
+        "score": round(probs[1].item() - probs[2].item(), 3)  # positive - negative
+    }
 
 if __name__ == "__main__":
-    start_time = time.time()
-    multi_data = get_multi_timeframe_data('NVDA')
-    confluenze_analysis = analyze_pattern_confluence(multi_data)
-    print(confluenze_analysis)
-    print("Time taken:", time.time()-start_time)
+    get_news_sentiment('AAPL')
