@@ -1,5 +1,4 @@
-import yfinance as yf, requests, talib, pandas as pd, time, yaml
-from textblob import TextBlob
+import yfinance as yf, requests, talib, pandas as pd, yaml
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
