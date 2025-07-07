@@ -100,51 +100,26 @@ def get_stock_quote(ticker_symbol: str, period: str = "1d") -> dict:
     except Exception as e:
         return {"ERROR": f"An error occurred while fetching the quote: {e}"}
 
-def get_historical_analysis(ticker_symbol: str, period: str = "1mo") -> dict:
+def get_historical_analysis(symbol: str):
     """
     Provides historical analysis including trends and patterns.
     """
-    print(f"Agent: Analyzing historical data for '{ticker_symbol}' (period: {period})...")
+    print(f"Agent: Analyzing fundamental data for '{symbol}'")
     try:
-        ticker = yf.Ticker(ticker_symbol)
-        data = ticker.history(period=period)
-        
-        if data.empty or len(data) < 5:
-            return {"ERROR": f"Insufficient data for analysis: {ticker_symbol}"}
-        
-        # Calculate various metrics
-        closes = data['Close']
-        volumes = data['Volume']
-        
-        # Trend analysis
-        trend = "upward" if closes.iloc[-1] > closes.iloc[0] else "downward"
-        volatility = closes.std() / closes.mean() * 100
-        
-        # Moving averages
-        ma_short = closes.rolling(window=max(5, int(len(closes)*0.08))).mean().iloc[-1]
-        ma_long = closes.rolling(window=max(10, int(len(closes)*0.8))).mean().iloc[-1]
-
+        stock = yf.Ticker(symbol)
+        info = stock.info
         res = {
-            "symbol": ticker_symbol,
-            "period": period,
-            "trend_direction": trend,
-            "volatility_pct": volatility,
-            "ma_short": ma_short,
-            "ma_long": ma_long,
-            "highest_price": closes.max(),
-            "lowest_price": closes.min(),
-            "avg_daily_volume": volumes.mean(),
-            "total_return_pct": ((closes.iloc[-1] - closes.iloc[0]) / closes.iloc[0]) * 100
+            "pe_ratio": info.get("trailingPE"),
+            "pb_ratio": info.get("priceToBook"),
+            "eps": info.get("trailingEps"),
+            "roe": info.get("returnOnEquity"),
+            "dividend_yield": info.get("dividendYield"),
+            "market_cap": info.get("marketCap"),
         }
-
-        # Debugging
-        # print("\n", "-"*10, "HIST. ANALYSIS", "-"*10)
-        # print(res, "\n")
-        
         return res
     
     except Exception as e:
-        return {"ERROR": f"An error occurred during analysis: {e}"}
+        return {"ERROR": f"Failed to fetch fundamentals for {symbol}: {str(e)}"}
 
 def compare_stock_data(stock_results: dict, period: str = "1mo") -> dict:
     """
@@ -487,4 +462,4 @@ def get_sentiment(text):
     }
 
 if __name__ == "__main__":
-    get_news_sentiment('AAPL')
+    get_historical_analysis("AAPL")
