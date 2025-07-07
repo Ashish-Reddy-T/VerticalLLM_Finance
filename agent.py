@@ -24,7 +24,7 @@ llm = Llama(
 print("\nAgent: Model loaded successfully.")
 
 print("Agent: Initializing Self-RAG system...")
-self_rag = SelfRAG(llm)
+# self_rag = SelfRAG(llm)
 
 # Define the Tools the Agent could Use
 tools = {
@@ -163,7 +163,7 @@ def execute_tool_step(step: dict, previous_results: dict) -> dict:
     elif tool_name == "get_historical_data":
         company_name = next(iter(parameters.values()))
         period = parameters.get('period', '1mo')
-        return execute_historical_tool(company_name, period)
+        return execute_historical_tool(company_name)
 
     elif tool_name == "compare_stocks":
         companies = next(iter(parameters.values()))
@@ -199,7 +199,7 @@ def execute_stock_info_tool(company: str, period: str = '1d') -> dict:
 
     return results
 
-def execute_historical_tool(company: str, period: str = '1mo') -> dict:
+def execute_historical_tool(company: str) -> dict:
     """Get historical analysis for a company."""
     if not company:
         return {"ERROR": "No company specified"}
@@ -211,7 +211,7 @@ def execute_historical_tool(company: str, period: str = '1mo') -> dict:
         symbol = search_yahoo_api(company)
         if not symbol:
             return {"ERROR": f"Could not find ticker for: {company}"}
-        results[company] = get_historical_analysis(symbol, period)
+        results[company] = get_historical_analysis(symbol)
     
     return results
     
@@ -280,7 +280,7 @@ def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict
     try:
         print(f"Agent: Executing comprehensive analysis for {company}...")
 
-        fundamental_data = execute_historical_tool(company, '3mo')
+        fundamental_data = execute_historical_tool(company)
         technical_data = execute_candlestick_analysis(company)
         sentiment_data = get_news_sentiment(company, days_back=7)
         
