@@ -3,54 +3,69 @@ from llama_cpp import Llama
 from utils import get_config
 from financial_tools import (
     search_yahoo_api, 
-    get_stock_quote, get_historical_analysis, compare_stock_data, get_news_sentiment,
-    get_multi_timeframe_data, analyze_pattern_confluence
+    get_stock_quote, compare_stock_data
 )
+from technical_analysis import TechnicalAnalyzer
+from fundamental_analysis import FundamentalAnalyzer
+from sentiment_analysis import SentimentAnalyzer
 from self_rag import SelfRAG
 
 # Initialize LLM
 print("Agent: Loading configuration...")
 config_file = get_config()
-model_path = config_file.get('model', {}).get('path') # Modify this if deploying! (to include models dir)
+model_path = config_file.get('model', {}).get('path')
 
 print("Agent: Initializing Mistral 7B model...\n")
 llm = Llama(
     model_path=model_path,
-    n_gpu_layers=-1,                # Offload all layers to the GPU (my mac has 14 GPU cores)
-    n_ctx=8192,                     # Set context window size
-    chat_format="mistral-instruct", # Use the correct chat template for this model
-    verbose=False                   # Keep the output clean
+    n_gpu_layers=-1,
+    n_ctx=8192,
+    chat_format="mistral-instruct",
+    verbose=False
 )
 print("\nAgent: Model loaded successfully.")
 
-print("Agent: Initializing Self-RAG system...")
-# self_rag = SelfRAG(llm)
+print("Agent: Initializing Technical Analysis system...")
+technical_analyzer = TechnicalAnalyzer()
 
-# Define the Tools the Agent could Use
+print("Agent: Initializing Fundamental Analysis system...")
+fundamental_analyzer = FundamentalAnalyzer()
+
+print("Agent: Initializing Sentiment Analysis system...")
+sentiment_analyzer = SentimentAnalyzer()
+
+print("Agent: Initializing Self-RAG system...")
+self_rag = SelfRAG(llm)
+
+# Enhanced Tools with comprehensive analysis systems
 tools = {
     "get_stock_info": {
         "description": "Get current or recent stock price, volume, and trading data for a company. Can specify period like '1d', '5d', '1mo'.",
         "function": "get_stock_quote"
     },
-    "get_historical_data": {
-        "description": "Get historical stock data and trends for analysis over periods like '1mo', '3mo', '6mo', '1y'.",
-        "function": "get_historical_analysis"
-    },
     "compare_stocks": {
         "description": "Compare multiple companies' stock performance over a specified time period.",
         "function": "compare_stock_data"
     },
-    "analyze_candlestick_patterns": {
-        "description": "Analyze candlestick patterns across multiple timeframes(15m, 1h, 4h, 1d) to generate buy/sell signals.",
-        "function": "execute_candlestick_analysis"
+    "comprehensive_technical_analysis": {
+        "description": "Complete technical analysis with trend, momentum, volume, volatility indicators and candlestick patterns across multiple timeframes.",
+        "function": "execute_comprehensive_technical_analysis"
+    },
+    "comprehensive_fundamental_analysis": {
+        "description": "Complete fundamental analysis including valuation ratios, profitability metrics, growth analysis, financial health, and dividend analysis.",
+        "function": "execute_comprehensive_fundamental_analysis"
+    },
+    "comprehensive_sentiment_analysis": {
+        "description": "Multi-source sentiment analysis including news, analyst ratings, social media, insider trading, and options flow.",
+        "function": "execute_comprehensive_sentiment_analysis"
     },
     "comprehensive_analysis": {
-        "description": "Complete analysis combining fundamentals, technicals, and candlestick patterns for trading decisions.",
+        "description": "Complete analysis combining enhanced technical (50%), fundamental (30%), and sentiment (20%) analysis for investment decisions.",
         "function": "execute_comprehensive_analysis"
     }
-}   
+}
 
-# Core Agent Logic (Follow ReAct format)
+# Core Agent Logic (Enhanced ReAct framework)
 def handle_query(query: str) -> str:
     """
     Handles a user query by following an enhanced ReAct framework with planning.
@@ -90,10 +105,12 @@ Available tools:
 {tool_descriptions}
 
 QUERY ANALYSIS GUIDELINES:
-- If query mentions "patterns", "candlestick", "technical", "buy", "sell", "signal" → use analyze_candlestick_patterns
+- If query mentions "technical analysis", "indicators", "MACD", "RSI", "patterns", "signals" → use comprehensive_technical_analysis
+- If query mentions "fundamentals", "P/E ratio", "earnings", "financial health", "valuation" → use comprehensive_fundamental_analysis
+- If query mentions "sentiment", "news", "analyst ratings", "social media", "insider trading" → use comprehensive_sentiment_analysis
 - If query asks for "complete analysis", "recommendation", "should I buy/sell" → use comprehensive_analysis  
 - If query compares multiple stocks → use compare_stocks
-- If query asks for basic info only → use get_stock_info or get_historical_data
+- If query asks for basic info only → use get_stock_info
 - If query is general knowledge → set needs_tools: false
 
 For each step, specify:
@@ -131,10 +148,9 @@ Plan: [/INST]"""
         end_idx = plan_text.rfind('}') + 1
         if start_idx != -1 and end_idx != -1:
             json_text = plan_text[start_idx:end_idx]
-            # Debugging
-            print("\n", "-"*10, "INFO", "-"*10)
+            print("\n", "-"*10, "EXECUTION PLAN", "-"*10)
             print(json_text)
-            plan = json.loads(json_text) # Get dict from json
+            plan = json.loads(json_text)
         else:
             plan = {"needs_tools": False, "steps": []}
     except Exception as e:
@@ -143,13 +159,12 @@ Plan: [/INST]"""
     
     return plan
 
-
 def execute_tool_step(step: dict, previous_results: dict) -> dict:
     """
     Executes a single tool step with access to previous results.
     """
-    tool_name = step.get('tool') # ex: get_historical_data
-    parameters = step.get('parameters', {}) # ex: {"ticker": "GOOGL", "period": "1y"}
+    tool_name = step.get('tool')
+    parameters = step.get('parameters', {})
     
     if tool_name not in tools:
         return {"ERROR": f"Unknown tool: {tool_name}"}
@@ -160,21 +175,24 @@ def execute_tool_step(step: dict, previous_results: dict) -> dict:
         period = parameters.get('period', '1d')
         return execute_stock_info_tool(company_name, period)
     
-    elif tool_name == "get_historical_data":
-        company_name = next(iter(parameters.values()))
-        period = parameters.get('period', '1mo')
-        return execute_historical_tool(company_name)
-
     elif tool_name == "compare_stocks":
         companies = next(iter(parameters.values()))
         period = parameters.get('period', '1mo')
         return execute_comparison_tool(companies, period)
     
-    elif tool_name == "analyze_candlestick_patterns":
+    elif tool_name == "comprehensive_technical_analysis":
         company_name = next(iter(parameters.values()))
         timeframes = parameters.get('timeframes', ['15m', '1h', '4h', '1d'])
-        period = parameters.get('period', '5d')
-        return execute_candlestick_analysis(company_name, timeframes, period)
+        return execute_comprehensive_technical_analysis(company_name, timeframes)
+    
+    elif tool_name == "comprehensive_fundamental_analysis":
+        company_name = next(iter(parameters.values()))
+        return execute_comprehensive_fundamental_analysis(company_name)
+    
+    elif tool_name == "comprehensive_sentiment_analysis":
+        company_name = next(iter(parameters.values()))
+        days_back = parameters.get('days_back', 7)
+        return execute_comprehensive_sentiment_analysis(company_name, days_back)
     
     elif tool_name == "comprehensive_analysis":
         company_name = next(iter(parameters.values()))
@@ -183,7 +201,7 @@ def execute_tool_step(step: dict, previous_results: dict) -> dict:
     return {"ERROR": f"Tool execution not implemented for: {tool_name}"}
 
 def execute_stock_info_tool(company: str, period: str = '1d') -> dict:
-    "Get current basic stock info for a company/comapnies"
+    """Get current basic stock info for a company/companies"""
     if not company:
         return {"ERROR": "No company specified"}
     
@@ -199,19 +217,69 @@ def execute_stock_info_tool(company: str, period: str = '1d') -> dict:
 
     return results
 
-def execute_historical_tool(company: str) -> dict:
-    """Get historical analysis for a company."""
+def execute_comprehensive_fundamental_analysis(company: str) -> dict:
+    """Execute comprehensive fundamental analysis using the new FundamentalAnalyzer"""
     if not company:
         return {"ERROR": "No company specified"}
-    
-    companies = [company] if not isinstance(company, list) else company
 
+    companies = [company] if not isinstance(company, list) else company
     results = {}
+
     for company in companies:
         symbol = search_yahoo_api(company)
         if not symbol:
             return {"ERROR": f"Could not find ticker for: {company}"}
-        results[company] = get_historical_analysis(symbol)
+        
+        try:
+            print(f"Agent: Executing comprehensive fundamental analysis for {symbol}")
+            
+            # Use the new FundamentalAnalyzer
+            analysis_result = fundamental_analyzer.analyze_comprehensive_fundamentals(symbol)
+            
+            if "ERROR" in str(analysis_result):
+                return analysis_result
+            
+            results[company] = {
+                **analysis_result,
+                "company": company,
+                "analysis_type": "comprehensive_fundamental"
+            }
+
+        except Exception as e:
+            return {"ERROR": f"Comprehensive fundamental analysis failed: {e}"}
+    
+    return results
+
+def execute_comprehensive_sentiment_analysis(company: str, days_back: int = 7) -> dict:
+    """Execute comprehensive sentiment analysis using the new SentimentAnalyzer"""
+    if not company:
+        return {"ERROR": "No company specified"}
+
+    companies = [company] if not isinstance(company, list) else company
+    results = {}
+
+    for company in companies:
+        symbol = search_yahoo_api(company)
+        if not symbol:
+            return {"ERROR": f"Could not find ticker for: {company}"}
+        
+        try:
+            print(f"Agent: Executing comprehensive sentiment analysis for {symbol}")
+            
+            # Use the new SentimentAnalyzer
+            analysis_result = sentiment_analyzer.analyze_comprehensive_sentiment(symbol, company, days_back)
+            
+            if "ERROR" in str(analysis_result):
+                return analysis_result
+            
+            results[company] = {
+                **analysis_result,
+                "company": company,
+                "analysis_type": "comprehensive_sentiment"
+            }
+
+        except Exception as e:
+            return {"ERROR": f"Comprehensive sentiment analysis failed: {e}"}
     
     return results
     
@@ -230,8 +298,8 @@ def execute_comparison_tool(companies: list, period: str = '1mo') -> dict:
     
     return compare_stock_data(results, period)
 
-def execute_candlestick_analysis(company: str, timeframes: list = ['15m', '1h', '4h', '1d'], period: str = '5d') -> dict:
-    """Execute comprehensive candlestick pattern analysis"""
+def execute_comprehensive_technical_analysis(company: str, timeframes: list = ['15m', '1h', '4h', '1d']) -> dict:
+    """Execute comprehensive technical analysis using the new TechnicalAnalyzer"""
     if not company:
         return {"ERROR": "No company specified"}
 
@@ -242,61 +310,67 @@ def execute_candlestick_analysis(company: str, timeframes: list = ['15m', '1h', 
         symbol = search_yahoo_api(company)
         if not symbol:
             return {"ERROR": f"Could not find ticker for: {company}"}
+        
         try:
-            print(f"Agent: Analyzing candlestick patterns for {symbol}")
-
-            multi_data = get_multi_timeframe_data(symbol=symbol, timeframes=timeframes)
-            if not multi_data:
-                return {"ERROR": f"No candlestick data available for {symbol}"}
-            confluence = analyze_pattern_confluence(multi_data)
-            # print(f"\nINFO: Risk Reward: {confluence}")
-            risk_reward = calculate_risk_reward_ratio(multi_data, confluence)
-            # print(f"INFO: Risk Reward: {risk_reward}\n")
-
+            print(f"Agent: Executing comprehensive technical analysis for {symbol}")
+            
+            # Use the new TechnicalAnalyzer
+            analysis_result = technical_analyzer.analyze_comprehensive_technicals(symbol, timeframes)
+            
+            if "ERROR" in str(analysis_result):
+                return analysis_result
+            
             results[company] = {
-                "symbol": symbol,
+                **analysis_result,
                 "company": company,
-                "timeframes_analyzed": list(multi_data.keys()),
-                "patterns_detected": len(confluence['detected_patterns']),
-                "confluence_analysis": confluence,
-                "risk_reward": risk_reward,
-                "recommendation": confluence['recommendation'],
-                "confidence": confluence['confidence'],
-                "signal_strength": confluence['confluence_score']
+                "analysis_type": "comprehensive_technical"
             }
 
         except Exception as e:
-            return {"ERROR": f"Candlestick analysis failed: {e}"}
+            return {"ERROR": f"Comprehensive technical analysis failed: {e}"}
     
     return results
 
 def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict:
     """
-    Execute comprehensive analysis combining all factors -- 20% sentiment / 30% fundamentals / 50% technicals framework
+    Execute comprehensive analysis combining all factors:
+    - Enhanced Technical Analysis (50%): All indicators + candlestick patterns
+    - Enhanced Fundamental Analysis (30%): Valuation, profitability, growth, health metrics
+    - Enhanced Sentiment Analysis (20%): Multi-source sentiment including news, analysts, social media
     """
     if not company:
         return {"ERROR": "No company specified"}
     
     try:
-        print(f"Agent: Executing comprehensive analysis for {company}...")
+        print(f"Agent: Executing comprehensive enhanced analysis for {company}...")
 
-        fundamental_data = execute_historical_tool(company)
-        technical_data = execute_candlestick_analysis(company)
-        sentiment_data = get_news_sentiment(company, days_back=7)
+        # Get enhanced technical analysis
+        technical_data = execute_comprehensive_technical_analysis(company)
+        
+        # Get enhanced fundamental analysis
+        fundamental_data = execute_comprehensive_fundamental_analysis(company)
+        
+        # Get enhanced sentiment analysis
+        sentiment_data = execute_comprehensive_sentiment_analysis(company, 7)
         
         # Combine analyses with weighting
         analysis = {
             "company": company,
-            "analysis_type": "comprehensive",
-            "fundamental_analysis": fundamental_data,
+            "analysis_type": "comprehensive_enhanced_v2",
             "technical_analysis": technical_data,
+            "fundamental_analysis": fundamental_data,
             "sentiment_analysis": sentiment_data,
             "combined_recommendation": None,
             "confidence_score": 0,
-            "reasoning": []
+            "reasoning": [],
+            "analysis_breakdown": {
+                "technical_weight": 0.50,
+                "fundamental_weight": 0.30,
+                "sentiment_weight": 0.20
+            }
         }
         
-        # Weights: 20% sentiment, 30% fundamental, 50% technical
+        # Enhanced weights
         technical_weight = 0.50
         fundamental_weight = 0.30
         sentiment_weight = 0.20
@@ -304,91 +378,105 @@ def execute_comprehensive_analysis(company: str, previous_results: dict) -> dict
         combined_score = 0
         reasoning = []
         
-        # Technical analysis contribution (50%)
-        if technical_data and "confluence_analysis" in technical_data:
-            tech_conf = technical_data["confluence_analysis"]
-            if tech_conf["recommendation"] == "BUY":
-                combined_score += technical_weight * tech_conf["confidence"]
-                reasoning.append(f"Technical analysis suggests BUY with {tech_conf['confidence']:.1%} confidence")
-            elif tech_conf["recommendation"] == "SELL":
-                combined_score -= technical_weight * tech_conf["confidence"]
-                reasoning.append(f"Technical analysis suggests SELL with {tech_conf['confidence']:.1%} confidence")
-        
-        # Fundamental analysis contribution (30%)
-        if fundamental_data and "trend_direction" in fundamental_data:
-            if fundamental_data["trend_direction"] == "upward":
-                combined_score += fundamental_weight * 0.6  # Moderate fundamental confidence
-                reasoning.append("Fundamental trend is upward")
+        # Enhanced Technical analysis contribution (50%)
+        tech_score = 0
+        if (technical_data and company in technical_data and 
+            "confluence_analysis" in technical_data[company]):
+            
+            tech_conf = technical_data[company]["confluence_analysis"]
+            tech_recommendation = tech_conf["recommendation"]
+            tech_confidence = tech_conf["confidence"]
+            
+            if tech_recommendation == "BUY":
+                tech_score = technical_weight * tech_confidence
+                combined_score += tech_score
+                reasoning.append(f"Technical: BUY signal with {tech_confidence:.1%} confidence across {len(tech_conf.get('detected_signals', []))} indicators")
+            elif tech_recommendation == "SELL":
+                tech_score = -technical_weight * tech_confidence
+                combined_score += tech_score
+                reasoning.append(f"Technical: SELL signal with {tech_confidence:.1%} confidence across {len(tech_conf.get('detected_signals', []))} indicators")
             else:
-                combined_score -= fundamental_weight * 0.6
-                reasoning.append("Fundamental trend is downward")
-
-        # Sentiment analysis contribution (20%)
-        if sentiment_data and "sentiment_score" in sentiment_data:
-            sentiment_signal = sentiment_data["sentiment_score"] * sentiment_data["confidence"]
-            combined_score += sentiment_weight * sentiment_signal
+                reasoning.append("Technical: HOLD - signals below confidence threshold")
         
-        # Determine final recommendation
-        if combined_score > 0.1:
+        # Enhanced Fundamental analysis contribution (30%)
+        fund_score = 0
+        if (fundamental_data and company in fundamental_data and 
+            "fundamental_analysis" in fundamental_data[company]):
+            
+            fund_analysis = fundamental_data[company]["fundamental_analysis"]
+            fund_recommendation = fund_analysis["recommendation"]
+            fund_confidence = fund_analysis["confidence"]
+            
+            # Convert fundamental recommendation to score
+            fund_signal_map = {
+                'BUY': 1.0, 'WEAK_BUY': 0.5, 'NEUTRAL': 0.0, 
+                'WEAK_SELL': -0.5, 'SELL': -1.0
+            }
+            fund_signal = fund_signal_map.get(fund_recommendation, 0.0)
+            fund_score = fundamental_weight * fund_signal * fund_confidence
+            combined_score += fund_score
+            
+            reasoning.append(f"Fundamental: {fund_recommendation} with {fund_confidence:.1%} confidence across {fund_analysis.get('metrics_analyzed', 0)} metrics")
+
+        # Enhanced Sentiment analysis contribution (20%)
+        sent_score = 0
+        if (sentiment_data and company in sentiment_data and 
+            "overall_sentiment" in sentiment_data[company]):
+            
+            sent_analysis = sentiment_data[company]["overall_sentiment"]
+            sent_score_raw = sent_analysis["weighted_score"]
+            sent_confidence = sent_analysis["confidence"]
+            
+            sent_score = sentiment_weight * sent_score_raw * sent_confidence
+            combined_score += sent_score
+            
+            reasoning.append(f"Sentiment: {sent_analysis['recommendation']} with {sent_confidence:.1%} confidence from {sent_analysis.get('sources_analyzed', 0)} sources")
+        
+        # Determine final recommendation with enhanced thresholds
+        if combined_score > 0.20:
+            analysis["combined_recommendation"] = "STRONG_BUY"
+        elif combined_score > 0.10:
             analysis["combined_recommendation"] = "BUY"
-        elif combined_score < -0.1:
+        elif combined_score > 0.05:
+            analysis["combined_recommendation"] = "WEAK_BUY"
+        elif combined_score > -0.05:
+            analysis["combined_recommendation"] = "HOLD"
+        elif combined_score > -0.10:
+            analysis["combined_recommendation"] = "WEAK_SELL"
+        elif combined_score > -0.20:
             analysis["combined_recommendation"] = "SELL"
         else:
-            analysis["combined_recommendation"] = "HOLD"
+            analysis["combined_recommendation"] = "STRONG_SELL"
         
         analysis["confidence_score"] = abs(combined_score)
         analysis["reasoning"] = reasoning
+        
+        # Enhanced score breakdown
+        analysis["score_breakdown"] = {
+            "technical_contribution": tech_score,
+            "fundamental_contribution": fund_score,
+            "sentiment_contribution": sent_score,
+            "total_score": combined_score,
+            "score_components": {
+                "technical_pct": (tech_score / combined_score * 100) if combined_score != 0 else 0,
+                "fundamental_pct": (fund_score / combined_score * 100) if combined_score != 0 else 0,
+                "sentiment_pct": (sent_score / combined_score * 100) if combined_score != 0 else 0
+            }
+        }
 
-        print()
-        for key, value in analysis.items():
-            print(f"{key}: {value}")
+        print(f"\nEnhanced Analysis Summary for {company}:")
+        print(f"Final Recommendation: {analysis['combined_recommendation']}")
+        print(f"Overall Confidence: {analysis['confidence_score']:.3f}")
+        print(f"Technical Contribution: {tech_score:.3f}")
+        print(f"Fundamental Contribution: {fund_score:.3f}")
+        print(f"Sentiment Contribution: {sent_score:.3f}")
+        print(f"Total Score: {combined_score:.3f}")
         print()
         
         return analysis
         
     except Exception as e:
-        return {"ERROR": f"Comprehensive analysis failed: {e}"}
-
-def calculate_risk_reward_ratio(multi_data: dict, confluence: dict) -> dict:
-    """
-    Calculate risk-reward based on pattern analysis and support/resistance
-    """
-    daily_data = multi_data.get('1d', {}).get('ohlc')
-    
-    if daily_data is None or daily_data.empty:
-        return {"error": "Insufficient data for risk-reward calculation"}
-    
-    current_price = daily_data['Close'].iloc[-1]
-    
-    # Calculate support/resistance using recent highs/lows
-    resistance = daily_data['High'].rolling(window=min(20, len(daily_data))).max().iloc[-1]
-    support = daily_data['Low'].rolling(window=min(20, len(daily_data))).min().iloc[-1]
-    
-    if confluence['recommendation'] == 'BUY':
-        target = resistance
-        stop_loss = support
-        potential_profit = target - current_price
-        potential_loss = current_price - stop_loss
-    elif confluence['recommendation'] == 'SELL':
-        target = support
-        stop_loss = resistance
-        potential_profit = current_price - target
-        potential_loss = stop_loss - current_price
-    else:
-        return {"recommendation": "HOLD", "reason": "No clear directional bias"}
-    
-    risk_reward_ratio = potential_profit / potential_loss if potential_loss > 0 else 0
-    
-    return {
-        "current_price": float(current_price),
-        "target": float(target),
-        "stop_loss": float(stop_loss),
-        "potential_profit": float(potential_profit),
-        "potential_loss": float(potential_loss),
-        "risk_reward_ratio": float(risk_reward_ratio),
-        "trade_recommendation": "EXECUTE" if risk_reward_ratio >= 1.5 else "WAIT",
-        "risk_level": "LOW" if risk_reward_ratio >= 2.0 else "MEDIUM" if risk_reward_ratio >= 1.5 else "HIGH"
-    }
+        return {"ERROR": f"Comprehensive enhanced analysis failed: {e}"}
 
 def synthesize_response(query: str, plan: dict, results: dict) -> str:
     """
@@ -402,27 +490,43 @@ def synthesize_response(query: str, plan: dict, results: dict) -> str:
         if isinstance(result, dict) and "ERROR" not in str(result):
             context_parts.append(f"{step_key}: {result}")
 
-            if "confluence_analysis" in str(result):
+            if "comprehensive_technical" in str(result):
+                analysis_type = "comprehensive_technical"
+            elif "confluence_analysis" in str(result):
                 analysis_type = "technical"
             elif "combined_recommendation" in str(result):
                 analysis_type = "comprehensive"
 
-    
     context = "\n".join(context_parts)
-
-    # Debugging
-    # print("\n", "-"*10, "CONTEXT...", "-"*10)
-    # print(context, "\n")
     
-    if analysis_type == "technical":
-        synthesis_prompt = f"""[INST] You are a professional trading analyst. Provide a comprehensive technical analysis report based on the candlestick pattern analysis.
+    if analysis_type == "comprehensive_technical":
+        synthesis_prompt = f"""[INST] You are a professional trading analyst. Provide a comprehensive technical analysis report based on the multi-indicator analysis.
 
 ANALYSIS RESULTS:
 {context}
 
 INSTRUCTIONS:
 - Start with a clear BUY/SELL/HOLD recommendation and confidence level
-- Explain the key candlestick patterns detected and their significance
+- Explain the key technical indicators across different categories (trend, momentum, volume, volatility)
+- Discuss the multi-timeframe confluence and signal strength
+- Include specific entry/exit levels and risk-reward ratio if available
+- Mention any risk management considerations
+- Highlight the strongest signals and any conflicting indicators
+- Keep the tone professional but accessible
+
+USER QUERY: "{query}"
+
+COMPREHENSIVE TECHNICAL ANALYSIS REPORT: [/INST]"""
+
+    elif analysis_type == "technical":
+        synthesis_prompt = f"""[INST] You are a professional trading analyst. Provide a comprehensive technical analysis report.
+
+ANALYSIS RESULTS:
+{context}
+
+INSTRUCTIONS:
+- Start with a clear BUY/SELL/HOLD recommendation and confidence level
+- Explain the key technical patterns and indicators detected
 - Discuss the multi-timeframe confluence
 - Include specific entry/exit levels and risk-reward ratio
 - Mention any risk management considerations
@@ -432,23 +536,62 @@ USER QUERY: "{query}"
 
 TECHNICAL ANALYSIS REPORT: [/INST]"""
 
-    elif analysis_type == "comprehensive":
-        synthesis_prompt = f"""[INST] You are a senior investment analyst. Provide a comprehensive investment recommendation combining fundamental and technical analysis.
+    elif "fundamental" in str(results).lower():
+        synthesis_prompt = f"""[INST] You are a fundamental analyst. Provide a comprehensive fundamental analysis report.
 
 ANALYSIS RESULTS:
 {context}
 
 INSTRUCTIONS:
-- Lead with clear investment recommendation and confidence score
-- Explain both fundamental and technical factors
-- Discuss how different timeframes and analysis methods agree or disagree
-- Provide specific action items and risk management
-- Include reasoning for the combined recommendation
+- Start with a clear investment recommendation and confidence level
+- Explain the key fundamental metrics across valuation, profitability, growth, and financial health
+- Discuss strengths and weaknesses in the company's fundamentals
+- Compare metrics to industry standards where relevant
+- Provide long-term investment perspective
+- Keep tone professional and informative
+
+USER QUERY: "{query}"
+
+FUNDAMENTAL ANALYSIS REPORT: [/INST]"""
+
+    elif "sentiment" in str(results).lower():
+        synthesis_prompt = f"""[INST] You are a market sentiment analyst. Provide a comprehensive sentiment analysis report.
+
+ANALYSIS RESULTS:
+{context}
+
+INSTRUCTIONS:
+- Start with a clear sentiment recommendation (POSITIVE/NEGATIVE/NEUTRAL)
+- Explain the different sentiment sources analyzed (news, analysts, social media, etc.)
+- Discuss the reliability and volume of each source
+- Highlight any conflicting sentiment signals
+- Provide short-term market perspective based on sentiment
+- Keep tone professional but accessible
+
+USER QUERY: "{query}"
+
+SENTIMENT ANALYSIS REPORT: [/INST]"""
+
+    elif analysis_type == "comprehensive":
+        synthesis_prompt = f"""[INST] You are a senior investment analyst. Provide a comprehensive investment recommendation combining enhanced technical, fundamental and sentiment analysis.
+
+ANALYSIS RESULTS:
+{context}
+
+INSTRUCTIONS:
+- Lead with clear investment recommendation (STRONG_BUY/BUY/WEAK_BUY/HOLD/WEAK_SELL/SELL/STRONG_SELL) and confidence score
+- Explain how the enhanced technical analysis (50% weight) contributes with multiple indicator categories
+- Discuss comprehensive fundamental factors (30% weight) including valuation, profitability, growth metrics
+- Explain multi-source sentiment analysis (20% weight) from news, analysts, social media, insider trading
+- Explain how different analysis methods agree or disagree
+- Provide specific action items and risk management based on the combined analysis
+- Include reasoning for the combined recommendation and score breakdown
+- Highlight the contribution percentage of each analysis type
 - Keep tone professional and decisive
 
 USER QUERY: "{query}"
 
-INVESTMENT ANALYSIS REPORT: [/INST]"""
+ENHANCED INVESTMENT ANALYSIS REPORT: [/INST]"""
 
     else:
         # Standard synthesis for basic queries
@@ -463,7 +606,7 @@ Provide a clear, comprehensive response: [/INST]"""
     
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": synthesis_prompt}],
-        max_tokens=600,  # Increased for more detailed responses
+        max_tokens=800,  # Increased for more detailed responses
         temperature=0.7
     )
     
