@@ -2,5 +2,4 @@ __pycache__/
 *.DS_Store
 *.pyc
 fin_slm
-fundamental_tools.py
 sample.ipynb
