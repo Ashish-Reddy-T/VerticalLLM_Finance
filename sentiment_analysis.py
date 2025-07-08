@@ -40,7 +40,7 @@ class SentimentAnalyzer:
         
         # Initialize FinBERT for financial sentiment analysis
         print("INFO: Trying to load FinBERT model")
-        self._init_finbert()
+        #self._init_finbert()
         
         # Weights for different sentiment sources
         self.source_weights = {
@@ -396,19 +396,23 @@ class SentimentAnalyzer:
             
             try:
                 insider_transactions = ticker.insider_transactions
-            except:
+            except Exception as e:
+                print(f"ERROR: Failed to access _insider transactions_ for {symbol}. Returning ...")
                 return None
             
             if insider_transactions is None or insider_transactions.empty:
+                print("ERROR: Access to _insider transactions_ yielded nothing")
                 return None
             
             # Analyze recent transactions (last 90 days)
             cutoff_date = datetime.now() - timedelta(days=90)
+            insider_transactions['Start Date'] = pd.to_datetime(insider_transactions['Start Date'], errors='coerce')
             recent_transactions = insider_transactions[
-                pd.to_datetime(insider_transactions.index) > cutoff_date
+                insider_transactions['Start Date'] > cutoff_date
             ]
             
             if recent_transactions.empty:
+                print("ERROR: Recent transactions are empty. Returning ...")
                 return None
             
             # Calculate sentiment based on buy vs sell transactions
@@ -428,17 +432,19 @@ class SentimentAnalyzer:
                     transaction_count += 1
             
             if transaction_count == 0:
+                print("WARNING: Found no transactions. Returning ...")
                 return None
             
             total_value = buy_value + sell_value
             if total_value == 0:
+                print("WARNING: No values have been determined for transactions. Returning ...")
                 return None
             
             # Calculate sentiment: +1 for all buys, -1 for all sells
             net_sentiment = (buy_value - sell_value) / total_value
             confidence = min(transaction_count / 5, 1.0)  # Higher confidence with more transactions
             
-            return SentimentSource(
+            res = SentimentSource(
                 source_type="insider_trading",
                 sentiment_score=net_sentiment,
                 confidence=confidence,
@@ -451,6 +457,10 @@ class SentimentAnalyzer:
                     'period_days': 90
                 }
             )
+
+            print(res)
+
+            return res
             
         except Exception as e:
             print(f"ERROR: Insider trading analysis error: {e}")
@@ -681,6 +691,5 @@ class SentimentAnalyzer:
         return categories
     
 if __name__ == "__main__":
-    anal = SentimentAnalyzer()
-    anal._analyze_analyst_sentiment('GOOG')
-    
+    alas = SentimentAnalyzer()
+    alas._analyze_insider_trading("AAPL")
