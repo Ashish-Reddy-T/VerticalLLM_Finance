@@ -39,6 +39,7 @@ class SentimentAnalyzer:
         self.api_keys = self.config.get('api_keys', {})
         
         # Initialize FinBERT for financial sentiment analysis
+        print("INFO: Trying to load FinBERT model")
         self._init_finbert()
         
         # Weights for different sentiment sources
@@ -154,6 +155,7 @@ class SentimentAnalyzer:
             
             all_articles = []
             
+            print("INFO: Starting to get articles")
             for query in queries:
                 url = "https://newsapi.org/v2/everything"
                 params = {
@@ -191,6 +193,7 @@ class SentimentAnalyzer:
             # Analyze sentiment for each article
             sentiments = []
             
+            print("INFO: Getting FinBERT Sentiment Scores for articles")
             for article in unique_articles[:50]:  # Limit to top 50
                 title = article.get('title', '')
                 description = article.get('description', '')
@@ -206,17 +209,19 @@ class SentimentAnalyzer:
                         sentiments.append(sentiment_result)
             
             if not sentiments:
+                print("WARNING: No sentiments discovered from FinBERT")
                 return None
             
             # Calculate weighted average sentiment
             total_weight = sum(s['confidence'] for s in sentiments)
             if total_weight == 0:
+                print("WARNING: Confidence score is 0 (implying no sentiments may have been discovered)")
                 return None
             
             weighted_sentiment = sum(s['score'] * s['confidence'] for s in sentiments) / total_weight
             avg_confidence = np.mean([s['confidence'] for s in sentiments])
-            
-            return SentimentSource(
+
+            res = SentimentSource(
                 source_type="news_sentiment",
                 sentiment_score=weighted_sentiment,
                 confidence=avg_confidence,
@@ -228,6 +233,9 @@ class SentimentAnalyzer:
                     'date_range': f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
                 }
             )
+
+            print("INFO: Successfully analyzed news sentiment ...")
+            return res
             
         except Exception as e:
             print(f"ERROR: News sentiment analysis error: {e}")
@@ -242,45 +250,65 @@ class SentimentAnalyzer:
             recommendations = None
             try:
                 recommendations = ticker.recommendations
-            except:
-                pass
+            except Exception as e:
+                print(f"ERROR: Couldn't get recommendations: {e}")
+                recommendations = None
             
             # Get analyst price targets
             analyst_price_targets = None
             try:
-                analyst_price_targets = ticker.analyst_price_target
-            except:
-                pass
+                analyst_price_targets = ticker.analyst_price_targets
+            except Exception as e:
+                print(f"ERROR: Couldn't get price targets: {e}")
+                analyst_price_targets = None
             
             if recommendations is None and analyst_price_targets is None:
+                print("ERROR: No analyst recommendations or price targets found")
                 return None
             
             sentiment_scores = []
             current_price = None
+            details = {
+                'recommendations_count': 0,
+                'price_target_analyzed': None,
+                'current_price': None
+            }
             
             try:
                 current_price = ticker.history(period="1d")['Close'].iloc[-1]
-            except:
-                pass
+                details['current_price'] = current_price
+            except Exception as e:
+                print(f"Error getting current price: {e}")
             
-            # Analyze recent recommendations
+            # Analyze recommendations
             if recommendations is not None and not recommendations.empty:
-                recent_recs = recommendations.tail(20)  # Last 20 recommendations
-                
-                rating_scores = {
-                    'Strong Buy': 1.0,
-                    'Buy': 0.5,
-                    'Hold': 0.0,
-                    'Sell': -0.5,
-                    'Strong Sell': -1.0
+                rating_weights = {
+                    'strongBuy': 1.0,
+                    'buy': 0.5,
+                    'hold': 0.0,
+                    'sell': -0.5,
+                    'strongSell': -1.0
                 }
                 
-                for _, rec in recent_recs.iterrows():
-                    to_grade = rec.get('To Grade', '')
-                    if to_grade in rating_scores:
-                        sentiment_scores.append(rating_scores[to_grade])
+                # Get the most recent period (0m)
+                latest = recommendations[recommendations['period'] == '0m'].iloc[0]
+
+                total_ratings = 0
+                weighted_sum = 0.0
+                
+                for rating_type, weight in rating_weights.items():
+                    if rating_type in latest:
+                        count = latest[rating_type]
+                        weighted_sum += count * weight
+                        total_ratings += count
+                
+                if total_ratings > 0:
+                    avg_sentiment = weighted_sum / total_ratings
+                    sentiment_scores.append(avg_sentiment)
+                    details['recommendations_count'] = total_ratings
+                    print(f"Processed {total_ratings} ratings with average sentiment: {avg_sentiment}")
             
-            # Analyze price targets vs current price
+            # Analyze price targets
             if analyst_price_targets is not None and current_price:
                 target_mean = analyst_price_targets.get('targetMeanPrice')
                 target_high = analyst_price_targets.get('targetHighPrice')
@@ -288,32 +316,32 @@ class SentimentAnalyzer:
                 
                 if target_mean and target_mean > 0:
                     price_sentiment = (target_mean - current_price) / current_price
-                    # Normalize to -1 to 1 range
                     price_sentiment = np.clip(price_sentiment * 2, -1, 1)
                     sentiment_scores.append(price_sentiment)
+                    details['price_target_analyzed'] = target_mean
             
             if not sentiment_scores:
+                print("ERROR: No sentiment scores could be calculated")
                 return None
             
             avg_sentiment = np.mean(sentiment_scores)
             confidence = min(len(sentiment_scores) / 10, 1.0)  # Higher confidence with more data points
-            
-            return SentimentSource(
+
+            res = SentimentSource(
                 source_type="analyst_ratings",
                 sentiment_score=avg_sentiment,
                 confidence=confidence,
                 volume=len(sentiment_scores),
                 reliability=self.source_reliability['analyst_ratings'],
-                details={
-                    'recommendations_count': len(recent_recs) if 'recent_recs' in locals() else 0,
-                    'price_target_analyzed': target_mean if 'target_mean' in locals() else None,
-                    'current_price': current_price
-                }
+                details=details
             )
             
+            return res
+            
         except Exception as e:
-            print(f"ERROR: Analyst sentiment analysis error: {e}")
+            print(f"ERROR: Analyst sentiment analysis failed: {e}")
             return None
+
 
     def _analyze_social_media_sentiment(self, symbol: str, company_name: str) -> Optional[SentimentSource]:
         """Analyze social media sentiment (simplified - would need real API keys)"""
@@ -651,3 +679,8 @@ class SentimentAnalyzer:
                 'reliability': source.reliability
             }
         return categories
+    
+if __name__ == "__main__":
+    anal = SentimentAnalyzer()
+    anal._analyze_analyst_sentiment('GOOG')
+    
