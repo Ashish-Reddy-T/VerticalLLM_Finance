@@ -118,7 +118,7 @@ class FundamentalAnalyzer:
         # P/E Ratio Analysis
         pe_ratio = info.get('trailingPE') or info.get('forwardPE')
         if pe_ratio and pe_ratio > 0:
-            signal, strength = self._evaluate_pe_ratio(pe_ratio, info.get('industry', ''))
+            signal, strength = self._evaluate_pe_ratio(pe_ratio)
             metrics.append(FundamentalMetric(
                 metric_name="pe_ratio",
                 value=pe_ratio,
@@ -127,7 +127,7 @@ class FundamentalAnalyzer:
                 reliability=0.8,
                 details={'industry_avg': self._get_industry_pe_avg(info.get('industry', ''))}
             ))
-        
+            
         # P/B Ratio Analysis
         pb_ratio = info.get('priceToBook')
         if pb_ratio and pb_ratio > 0:
@@ -143,7 +143,7 @@ class FundamentalAnalyzer:
         # P/S Ratio Analysis
         ps_ratio = info.get('priceToSalesTrailing12Months')
         if ps_ratio and ps_ratio > 0:
-            signal, strength = self._evaluate_ps_ratio(ps_ratio, info.get('industry', ''))
+            signal, strength = self._evaluate_ps_ratio(ps_ratio)
             metrics.append(FundamentalMetric(
                 metric_name="ps_ratio",
                 value=ps_ratio,
@@ -200,7 +200,7 @@ class FundamentalAnalyzer:
         gross_margin = info.get('grossMargins')
         if gross_margin:
             gross_margin_pct = gross_margin * 100
-            signal, strength = self._evaluate_gross_margin(gross_margin_pct, info.get('industry', ''))
+            signal, strength = self._evaluate_gross_margin(gross_margin_pct)
             metrics.append(FundamentalMetric(
                 metric_name="gross_margin",
                 value=gross_margin_pct,
@@ -270,8 +270,8 @@ class FundamentalAnalyzer:
                         strength=strength,
                         reliability=0.7
                     ))
-        except:
-            pass  # Skip if data unavailable
+        except Exception as e:
+            print("ERROR: Couldn't find data for quarterly financials: {e}. Skipping ...")
         
         return metrics
 
@@ -394,8 +394,11 @@ class FundamentalAnalyzer:
         
         return metrics
 
+    # -------------------------
+
     # Evaluation methods for each metric
-    def _evaluate_pe_ratio(self, pe_ratio: float, industry: str) -> tuple:
+    # 1. Valuation Metrics
+    def _evaluate_pe_ratio(self, pe_ratio: float) -> tuple:
         """Evaluate P/E ratio"""
         if pe_ratio < 15:
             return FundamentalSignal.BUY, 0.8
@@ -417,7 +420,7 @@ class FundamentalAnalyzer:
         else:
             return FundamentalSignal.SELL, 0.7
 
-    def _evaluate_ps_ratio(self, ps_ratio: float, industry: str) -> tuple:
+    def _evaluate_ps_ratio(self, ps_ratio: float) -> tuple:
         """Evaluate P/S ratio"""
         if ps_ratio < 1.0:
             return FundamentalSignal.BUY, 0.7
@@ -437,6 +440,7 @@ class FundamentalAnalyzer:
         else:
             return FundamentalSignal.SELL, 0.7
 
+    # 2. Profitability Metrics
     def _evaluate_roe(self, roe_pct: float) -> tuple:
         """Evaluate Return on Equity"""
         if roe_pct > 20:
@@ -456,7 +460,26 @@ class FundamentalAnalyzer:
             return FundamentalSignal.NEUTRAL, 0.3
         else:
             return FundamentalSignal.SELL, 0.5
+    
+    def _evaluate_gross_margin(self, margin_pct: float) -> tuple:
+        """Evaluate gross margin"""
+        if margin_pct > 40:
+            return FundamentalSignal.BUY, 0.7
+        elif margin_pct > 20:
+            return FundamentalSignal.NEUTRAL, 0.3
+        else:
+            return FundamentalSignal.SELL, 0.5
+    
+    def _evaluate_operating_margin(self, margin_pct: float) -> tuple:
+        """Evaluate operating margin"""
+        if margin_pct > 15:
+            return FundamentalSignal.BUY, 0.8
+        elif margin_pct > 5:
+            return FundamentalSignal.NEUTRAL, 0.3
+        else:
+            return FundamentalSignal.SELL, 0.6
 
+    # 3. Growth Metrics
     def _evaluate_revenue_growth(self, growth_pct: float) -> tuple:
         """Evaluate revenue growth"""
         if growth_pct > 20:
@@ -478,7 +501,17 @@ class FundamentalAnalyzer:
             return FundamentalSignal.NEUTRAL, 0.3
         else:
             return FundamentalSignal.SELL, 0.7
+        
+    def _evaluate_quarterly_growth(self, growth_pct: float) -> tuple:
+        """Evaluate quarterly growth"""
+        if growth_pct > 10:
+            return FundamentalSignal.BUY, 0.7
+        elif growth_pct > 0:
+            return FundamentalSignal.NEUTRAL, 0.3
+        else:
+            return FundamentalSignal.SELL, 0.6
 
+    # 4. Financial Health Metrics
     def _evaluate_debt_to_equity(self, ratio: float) -> tuple:
         """Evaluate debt-to-equity ratio"""
         if ratio < 0.3:
@@ -497,43 +530,25 @@ class FundamentalAnalyzer:
         else:
             return FundamentalSignal.SELL, 0.6
 
-    # Additional evaluation methods (simplified for space)
     def _evaluate_quick_ratio(self, ratio: float) -> tuple:
-        return (FundamentalSignal.BUY, 0.6) if ratio > 1.0 else (FundamentalSignal.NEUTRAL, 0.3)
-
-    def _evaluate_gross_margin(self, margin_pct: float, industry: str) -> tuple:
-        if margin_pct > 40:
-            return FundamentalSignal.BUY, 0.7
-        elif margin_pct > 20:
-            return FundamentalSignal.NEUTRAL, 0.3
+        """Evaluate quick ratio"""
+        if ratio > 1.0:
+            return FundamentalSignal.BUY, 0.6
         else:
-            return FundamentalSignal.SELL, 0.5
-
-    def _evaluate_operating_margin(self, margin_pct: float) -> tuple:
-        if margin_pct > 15:
-            return FundamentalSignal.BUY, 0.8
-        elif margin_pct > 5:
             return FundamentalSignal.NEUTRAL, 0.3
-        else:
-            return FundamentalSignal.SELL, 0.6
-
-    def _evaluate_quarterly_growth(self, growth_pct: float) -> tuple:
-        if growth_pct > 10:
-            return FundamentalSignal.BUY, 0.7
-        elif growth_pct > 0:
-            return FundamentalSignal.NEUTRAL, 0.3
-        else:
-            return FundamentalSignal.SELL, 0.6
 
     def _evaluate_cash_position(self, cash_pct: float) -> tuple:
+        """Evaluate cash position"""
         if cash_pct > 15:
             return FundamentalSignal.BUY, 0.6
         elif cash_pct > 5:
             return FundamentalSignal.NEUTRAL, 0.3
         else:
             return FundamentalSignal.SELL, 0.4
-
+        
+    # 5. Dividend Metrics
     def _evaluate_dividend_yield(self, yield_pct: float) -> tuple:
+        """Evaluate dividend yield"""
         if 2 <= yield_pct <= 6:
             return FundamentalSignal.BUY, 0.6
         elif yield_pct > 0:
@@ -542,6 +557,7 @@ class FundamentalAnalyzer:
             return FundamentalSignal.NEUTRAL, 0.1
 
     def _evaluate_payout_ratio(self, payout_pct: float) -> tuple:
+        """Evaluate payout ratio"""
         if 30 <= payout_pct <= 60:
             return FundamentalSignal.BUY, 0.6
         elif payout_pct < 80:
@@ -549,11 +565,16 @@ class FundamentalAnalyzer:
         else:
             return FundamentalSignal.SELL, 0.7
 
+    # 6. Market Metrics
     def _evaluate_market_cap(self, market_cap: float) -> tuple:
+        """Evaluate Market Cap"""
         # Neutral signal - market cap doesn't inherently indicate buy/sell
         return FundamentalSignal.NEUTRAL, 0.2
 
+    # -------------------------
+
     def _evaluate_beta(self, beta: float) -> tuple:
+        """Evaluate Beta"""
         if 0.5 <= beta <= 1.5:
             return FundamentalSignal.NEUTRAL, 0.3
         else:
@@ -669,3 +690,11 @@ class FundamentalAnalyzer:
                 categories[category].append(metric.metric_name)
         
         return {k: len(v) for k, v in categories.items()}
+    
+if __name__ == "__main__":
+    import yfinance as yf
+    ticker = yf.Ticker('AAPL')
+    info = ticker.info
+
+    fundamental = FundamentalAnalyzer()
+    fundamental._analyze_valuation_metrics(ticker, info)
