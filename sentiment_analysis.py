@@ -553,18 +553,18 @@ class SentimentAnalyzer:
             # Get institutional holders
             try:
                 institutional_holders = ticker.institutional_holders
-            except:
+            except Exception as e:
+                print(f"ERROR: Failed to fetch instituitional holders: {e}")
                 return None
             
             if institutional_holders is None or institutional_holders.empty:
+                print("WARNING: Failed to retrieve data for instituitional holders. Returning ...")
                 return None
             
             # This is simplified - in reality you'd track changes over time
             # For now, we'll use the concentration of institutional ownership as a proxy
             
             total_shares = ticker.info.get('sharesOutstanding', 0)
-            if total_shares == 0:
-                return None
             
             # Calculate total institutional ownership
             total_institutional_shares = institutional_holders['Shares'].sum()
@@ -584,8 +584,8 @@ class SentimentAnalyzer:
                 sentiment_score = -0.3
             
             confidence = min(len(institutional_holders) / 20, 0.7)
-            
-            return SentimentSource(
+
+            res = SentimentSource(
                 source_type="institutional_activity",
                 sentiment_score=sentiment_score,
                 confidence=confidence,
@@ -597,6 +597,8 @@ class SentimentAnalyzer:
                     'total_institutional_shares': total_institutional_shares
                 }
             )
+            
+            return res
             
         except Exception as e:
             print(f"ERROR: Institutional activity analysis error: {e}")
@@ -695,4 +697,8 @@ class SentimentAnalyzer:
     
 if __name__ == "__main__":
     alas = SentimentAnalyzer()
-    alas._analyze_options_flow('AAPL')
+    alas._analyze_institutional_activity('AAPL')
+
+    # ticker = yf.Ticker('AAPL')
+    # inst = ticker.institutional_holders
+    # print(inst)
