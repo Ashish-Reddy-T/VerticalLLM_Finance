@@ -458,8 +458,6 @@ class SentimentAnalyzer:
                 }
             )
 
-            print(res)
-
             return res
             
         except Exception as e:
