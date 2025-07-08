@@ -70,7 +70,7 @@ class SentimentAnalyzer:
             self.sentiment_labels = {0: 'neutral', 1: 'positive', 2: 'negative'}
             print("Agent: FinBERT model loaded successfully")
         except Exception as e:
-            print(f"Warning: Could not load FinBERT model: {e}")
+            print(f"WARNING: Could not load FinBERT model: {e}")
             self.tokenizer = None
             self.model = None
 
@@ -137,7 +137,7 @@ class SentimentAnalyzer:
         try:
             news_api_key = self.api_keys.get('news')
             if not news_api_key:
-                print("Warning: News API key not found")
+                print("WARNING: News API key not found")
                 return None
             
             # Calculate date range
@@ -176,6 +176,7 @@ class SentimentAnalyzer:
                     continue
             
             if not all_articles:
+                print(f"WARNING: No articles found for: {company_name}")
                 return None
             
             # Remove duplicates based on title
@@ -563,6 +564,7 @@ class SentimentAnalyzer:
     def _get_finbert_sentiment(self, text: str) -> Optional[Dict]:
         """Get sentiment using FinBERT model"""
         if not self.tokenizer or not self.model:
+            print(f"WARNING: No tokenizer or model found for FinBERT")
             return None
         
         try:
