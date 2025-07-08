@@ -66,7 +66,6 @@ class SentimentAnalyzer:
             self.tokenizer = AutoTokenizer.from_pretrained(finbert_ckpt)
             self.model = AutoModelForSequenceClassification.from_pretrained(finbert_ckpt)
             self.sentiment_labels = {0: 'neutral', 1: 'positive', 2: 'negative'}
-            print("Agent: FinBERT model loaded successfully")
         except Exception as e:
             print(f"WARNING: Could not load FinBERT model: {e}")
             self.tokenizer = None

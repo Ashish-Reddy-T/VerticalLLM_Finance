@@ -22,7 +22,6 @@ def chat_session():
         if not query.strip(): # Re-prompt if user 'ENTERS' by mistake
             continue
 
-        print("\n🤖 Agent is thinking...")
         final_answer = handle_query(query)
 
         print("\n--- Agent's Response ---")

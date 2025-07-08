@@ -1,10 +1,7 @@
 from llama_cpp import Llama
 
 from utils import get_config
-from financial_tools import (
-    search_yahoo_api, 
-    get_stock_quote
-)
+from financial_tools import search_yahoo_api, get_stock_quote
 from technical_analysis import TechnicalAnalyzer
 from fundamental_analysis import FundamentalAnalyzer
 from sentiment_analysis import SentimentAnalyzer
@@ -128,7 +125,7 @@ Respond in this exact JSON format:
 User Query: "{query}"
 Plan: [/INST]"""
 
-    print("\nAgent: Generating ...")
+    print("\n🤖 Agent: Generating ...")
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": planning_prompt}],
         max_tokens=512,
@@ -219,10 +216,8 @@ def execute_comprehensive_fundamental_analysis(company: str) -> dict:
         if not symbol:
             return {"ERROR": f"Could not find ticker for: {company}"}
         
-        try:
-            print(f"Agent: Executing comprehensive fundamental analysis for {symbol}")
-            
-            # Use the new FundamentalAnalyzer
+        try:            
+            # Use FundamentalAnalyzer
             analysis_result = fundamental_analyzer.analyze_comprehensive_fundamentals(symbol)
             
             if "ERROR" in str(analysis_result):
@@ -253,7 +248,7 @@ def execute_comprehensive_sentiment_analysis(company: str, days_back: int = 7) -
             return {"ERROR": f"Could not find ticker for: {company}"}
         
         try:
-            # Use the SentimentAnalyzer
+            # Use SentimentAnalyzer
             analysis_result = sentiment_analyzer.analyze_comprehensive_sentiment(symbol, company, days_back)
             
             if "ERROR" in str(analysis_result):
@@ -576,7 +571,7 @@ USER QUERY: "{query}"
 
 Provide a clear, comprehensive response: [/INST]"""
     
-    print("Agent: Generating ...")
+    print("🤖 Agent: Generating ...")
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": synthesis_prompt}],
         max_tokens=800,  # Increased for more detailed responses
