@@ -3,7 +3,7 @@ from llama_cpp import Llama
 from utils import get_config
 from financial_tools import (
     search_yahoo_api, 
-    get_stock_quote, compare_stock_data
+    get_stock_quote
 )
 from technical_analysis import TechnicalAnalyzer
 from fundamental_analysis import FundamentalAnalyzer
@@ -35,17 +35,13 @@ print("Agent: Initializing Sentiment Analysis system...")
 sentiment_analyzer = SentimentAnalyzer()
 
 print("Agent: Initializing Self-RAG system...")
-self_rag = SelfRAG(llm)
+# self_rag = SelfRAG(llm)
 
 # Enhanced Tools with comprehensive analysis systems
 tools = {
     "get_stock_info": {
         "description": "Get current or recent stock price, volume, and trading data for a company. Can specify period like '1d', '5d', '1mo'.",
         "function": "get_stock_quote"
-    },
-    "compare_stocks": {
-        "description": "Compare multiple companies' stock performance over a specified time period.",
-        "function": "compare_stock_data"
     },
     "comprehensive_technical_analysis": {
         "description": "Complete technical analysis with trend, momentum, volume, volatility indicators and candlestick patterns across multiple timeframes.",
@@ -109,7 +105,6 @@ QUERY ANALYSIS GUIDELINES:
 - If query mentions "fundamentals", "P/E ratio", "earnings", "financial health", "valuation" → use comprehensive_fundamental_analysis
 - If query mentions "sentiment", "news", "analyst ratings", "social media", "insider trading" → use comprehensive_sentiment_analysis
 - If query asks for "complete analysis", "recommendation", "should I buy/sell" → use comprehensive_analysis  
-- If query compares multiple stocks → use compare_stocks
 - If query asks for basic info only → use get_stock_info
 - If query is general knowledge → set needs_tools: false
 
@@ -130,11 +125,10 @@ Respond in this exact JSON format:
     ]
 }}
 
-If no tools are needed and the query is general knowledge → SET "needs_tools": false
-
 User Query: "{query}"
 Plan: [/INST]"""
 
+    print("\nAgent: Generating ...")
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": planning_prompt}],
         max_tokens=512,
@@ -174,11 +168,6 @@ def execute_tool_step(step: dict, previous_results: dict) -> dict:
         company_name = next(iter(parameters.values()))
         period = parameters.get('period', '1d')
         return execute_stock_info_tool(company_name, period)
-    
-    elif tool_name == "compare_stocks":
-        companies = next(iter(parameters.values()))
-        period = parameters.get('period', '1mo')
-        return execute_comparison_tool(companies, period)
     
     elif tool_name == "comprehensive_technical_analysis":
         company_name = next(iter(parameters.values()))
@@ -264,9 +253,7 @@ def execute_comprehensive_sentiment_analysis(company: str, days_back: int = 7) -
             return {"ERROR": f"Could not find ticker for: {company}"}
         
         try:
-            print(f"Agent: Executing comprehensive sentiment analysis for {symbol}")
-            
-            # Use the new SentimentAnalyzer
+            # Use the SentimentAnalyzer
             analysis_result = sentiment_analyzer.analyze_comprehensive_sentiment(symbol, company, days_back)
             
             if "ERROR" in str(analysis_result):
@@ -282,21 +269,6 @@ def execute_comprehensive_sentiment_analysis(company: str, days_back: int = 7) -
             return {"ERROR": f"Comprehensive sentiment analysis failed: {e}"}
     
     return results
-    
-def execute_comparison_tool(companies: list, period: str = '1mo') -> dict:
-    """Compare multiple companies."""
-    if not companies:
-        return {"ERROR": "No companies specified"}
-    
-    results = {}
-    for company in companies:
-        symbol = search_yahoo_api(company)
-        if symbol:
-            data = get_stock_quote(symbol, period)
-            if "ERROR" not in str(data):
-                results[company] = data
-    
-    return compare_stock_data(results, period)
 
 def execute_comprehensive_technical_analysis(company: str, timeframes: list = ['15m', '1h', '4h', '1d']) -> dict:
     """Execute comprehensive technical analysis using the new TechnicalAnalyzer"""
@@ -604,6 +576,7 @@ USER QUERY: "{query}"
 
 Provide a clear, comprehensive response: [/INST]"""
     
+    print("Agent: Generating ...")
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": synthesis_prompt}],
         max_tokens=800,  # Increased for more detailed responses
