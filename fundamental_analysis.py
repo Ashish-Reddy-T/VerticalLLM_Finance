@@ -1,9 +1,5 @@
 import yfinance as yf
-import requests
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List
 from dataclasses import dataclass
 from enum import Enum
 
@@ -70,43 +66,45 @@ class FundamentalAnalyzer:
             
             # 1. Valuation Metrics
             valuation_metrics = self._analyze_valuation_metrics(ticker, info)
+            print("\nINFO: Successfully retrieved Valuation Metrics.")
             all_metrics.extend(valuation_metrics)
             
             # 2. Profitability Metrics
             profitability_metrics = self._analyze_profitability_metrics(ticker, info)
+            print("INFO: Successfully retrieved Profitability Metrics.")
             all_metrics.extend(profitability_metrics)
             
             # 3. Growth Metrics
             growth_metrics = self._analyze_growth_metrics(ticker, info)
+            print("INFO: Successfully retrieved Growth Metrics.")
             all_metrics.extend(growth_metrics)
             
             # 4. Financial Health
             health_metrics = self._analyze_financial_health(ticker, info)
+            print("INFO: Successfully retrieved Health Metrics.")
             all_metrics.extend(health_metrics)
             
             # 5. Dividend Analysis
             dividend_metrics = self._analyze_dividend_metrics(ticker, info)
+            print("INFO: Successfully retrieved Dividend Metrics.")
             all_metrics.extend(dividend_metrics)
             
             # 6. Market Metrics
             market_metrics = self._analyze_market_metrics(ticker, info)
+            print("INFO: Successfully retrieved Market Metrics.\n")
             all_metrics.extend(market_metrics)
             
             # Calculate overall fundamental score
             fundamental_analysis = self._calculate_fundamental_score(all_metrics)
-            
-            return {
+
+            res = {
                 "symbol": symbol,
-                "company_name": info.get('longName', symbol),
-                "sector": info.get('sector', 'Unknown'),
-                "industry": info.get('industry', 'Unknown'),
-                "fundamental_metrics": all_metrics,
-                "category_breakdown": self._categorize_metrics(all_metrics),
-                "fundamental_analysis": fundamental_analysis,
                 "recommendation": fundamental_analysis['recommendation'],
                 "confidence": fundamental_analysis['confidence'],
                 "score": fundamental_analysis['total_score']
             }
+
+            return res
             
         except Exception as e:
             return {"ERROR": f"Fundamental analysis failed: {e}"}
@@ -396,7 +394,6 @@ class FundamentalAnalyzer:
 
     # -------------------------
 
-    # Evaluation methods for each metric
     # 1. Valuation Metrics
     def _evaluate_pe_ratio(self, pe_ratio: float) -> tuple:
         """Evaluate P/E ratio"""
@@ -571,15 +568,13 @@ class FundamentalAnalyzer:
         # Neutral signal - market cap doesn't inherently indicate buy/sell
         return FundamentalSignal.NEUTRAL, 0.2
 
-    # -------------------------
-
     def _evaluate_beta(self, beta: float) -> tuple:
         """Evaluate Beta"""
         if 0.5 <= beta <= 1.5:
             return FundamentalSignal.NEUTRAL, 0.3
         else:
             return FundamentalSignal.NEUTRAL, 0.1  # High volatility stocks
-
+    
     def _get_industry_pe_avg(self, industry: str) -> float:
         """Get industry average P/E (placeholder - would use real data)"""
         industry_averages = {
@@ -590,6 +585,8 @@ class FundamentalAnalyzer:
             'Energy': 15
         }
         return industry_averages.get(industry, 20)
+        
+    # -------------------------
 
     def _calculate_fundamental_score(self, metrics: List[FundamentalMetric]) -> Dict:
         """Calculate overall fundamental score"""
@@ -640,7 +637,7 @@ class FundamentalAnalyzer:
         
         confidence = min(abs(final_score), 1.0)
         
-        return {
+        res = {
             'total_score': final_score,
             'recommendation': recommendation,
             'confidence': confidence,
@@ -648,6 +645,8 @@ class FundamentalAnalyzer:
             'metrics_analyzed': len(metrics),
             'reasoning': f"Fundamental score: {final_score:.3f} based on {len(metrics)} metrics across {len(category_scores)} categories"
         }
+
+        return res
 
     def _get_metric_category(self, metric_name: str) -> str:
         """Categorize metrics"""
@@ -692,7 +691,6 @@ class FundamentalAnalyzer:
         return {k: len(v) for k, v in categories.items()}
     
 if __name__ == "__main__":
-    import yfinance as yf
     ticker = yf.Ticker('AAPL')
     info = ticker.info
 
