@@ -1,11 +1,9 @@
-import yfinance as yf, requests, yaml
-from pathlib import Path
+import yfinance as yf, requests
+from utils import get_config
 
 def load_config():
-    """Load configuration from config.yaml"""
-    config_path = Path(__file__).parent / "config.yaml"
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+    """Load configuration using :func:`utils.get_config`."""
+    return get_config()
     
 def search_yahoo_api(company_name: str) -> str | None:
     """
