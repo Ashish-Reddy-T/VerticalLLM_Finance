@@ -83,8 +83,8 @@ class SentimentAnalyzer:
         sentiment_sources = []
         
         try:
-            # 1. Enhanced News Sentiment
-            news_sentiment = self._analyze_enhanced_news_sentiment(company_name, days_back)
+            # 1. News Sentiment
+            news_sentiment = self._analyze_news_sentiment(company_name, days_back)
             if news_sentiment:
                 sentiment_sources.append(news_sentiment)
             
@@ -132,7 +132,7 @@ class SentimentAnalyzer:
         except Exception as e:
             return {"ERROR": f"Comprehensive sentiment analysis failed: {e}"}
 
-    def _analyze_enhanced_news_sentiment(self, company_name: str, days_back: int) -> Optional[SentimentSource]:
+    def _analyze_news_sentiment(self, company_name: str, days_back: int) -> Optional[SentimentSource]:
         """Enhanced news sentiment analysis with multiple sources"""
         try:
             news_api_key = self.api_keys.get('news')
