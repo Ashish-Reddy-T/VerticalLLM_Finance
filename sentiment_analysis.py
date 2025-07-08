@@ -473,6 +473,7 @@ class SentimentAnalyzer:
             try:
                 options_dates = ticker.options
                 if not options_dates:
+                    print("WARNING: Found no _options dates_. Returning ...")
                     return None
                 
                 # Get near-term options (first available expiration)
@@ -480,23 +481,25 @@ class SentimentAnalyzer:
                 calls = options_chain.calls
                 puts = options_chain.puts
                 
-            except:
-                return None
+            except Exception as e:
+                return f"ERROR: Failed to get options data: {e}"
             
             if calls.empty and puts.empty:
+                print("WARNING: Calls and/or Puts are empty. Returning ...")
                 return None
             
             # Analyze call vs put volume and open interest
-            call_volume = calls['volume'].sum() if 'volume' in calls.columns else 0
-            put_volume = puts['volume'].sum() if 'volume' in puts.columns else 0
+            call_volume = calls['volume'].sum()
+            put_volume = puts['volume'].sum()
             
-            call_oi = calls['openInterest'].sum() if 'openInterest' in calls.columns else 0
-            put_oi = puts['openInterest'].sum() if 'openInterest' in puts.columns else 0
+            call_oi = calls['openInterest'].sum()
+            put_oi = puts['openInterest'].sum()
             
             total_volume = call_volume + put_volume
             total_oi = call_oi + put_oi
             
             if total_volume == 0 and total_oi == 0:
+                print("WARNING: Total Volume and Open Interest don't have values. Returning ...")
                 return None
             
             # Calculate put/call ratios
@@ -521,7 +524,7 @@ class SentimentAnalyzer:
             # Confidence based on total activity
             confidence = min(np.log(total_volume + 1) / 10, 0.8)
             
-            return SentimentSource(
+            res = SentimentSource(
                 source_type="options_flow",
                 sentiment_score=avg_sentiment,
                 confidence=confidence,
@@ -535,6 +538,8 @@ class SentimentAnalyzer:
                     'expiration_date': options_dates[0]
                 }
             )
+
+            return res
             
         except Exception as e:
             print(f"ERROR: Options flow analysis error: {e}")
@@ -690,4 +695,4 @@ class SentimentAnalyzer:
     
 if __name__ == "__main__":
     alas = SentimentAnalyzer()
-    alas._analyze_insider_trading("AAPL")
+    alas._analyze_options_flow('AAPL')
