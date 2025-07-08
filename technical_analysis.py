@@ -623,55 +623,55 @@ class TechnicalAnalyzer:
         # Existing patterns from original code
         patterns['inverted_hammer'] = {
             'signal': talib.CDLINVERTEDHAMMER(open=open_prices, high=high_prices, low=low_prices, close=close_prices),
-            'reliability': 0.6,
+            'reliability': 0.65,
             'profit_potential': 1.12
         }
         patterns['bearish_marubozu'] = {
             'signal': talib.CDLMARUBOZU(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.561,
+            'reliability': 0.54,
             'profit_potential': 0.80
         }
         patterns['gravestone_doji'] = {
             'signal': talib.CDLGRAVESTONEDOJI(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.57,
+            'reliability': 0.51,
             'profit_potential': 0.65
         }
         
         engulfing_signal = talib.CDLENGULFING(open_prices, high_prices, low_prices, close_prices)
         patterns['bearish_engulfing'] = {
             'signal': [s if s < 0 else 0 for s in engulfing_signal],
-            'reliability': 0.57,
+            'reliability': 0.79,
             'profit_potential': 0.61
         }
         patterns['bullish_engulfing'] = {
             'signal': [s if s > 0 else 0 for s in engulfing_signal],
-            'reliability': 0.57,
+            'reliability': 0.63,
             'profit_potential': 0.58
         }
         patterns['shooting_star'] = {
             'signal': talib.CDLSHOOTINGSTAR(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.571,
+            'reliability': 0.60,
             'profit_potential': 0.56
         }
         patterns['hammer'] = {
             'signal': talib.CDLHAMMER(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.54,
+            'reliability': 0.61,
             'profit_potential': 0.52
         }
         patterns['hanging_man'] = {
             'signal': talib.CDLHANGINGMAN(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.54,
+            'reliability': 0.59,
             'profit_potential': 0.48
         }
         patterns['morning_star'] = {
             'signal': talib.CDLMORNINGSTAR(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.54,
-            'profit_potential': 0.45
+            'reliability': 0.78,
+            'profit_potential': 1.04
         }
         patterns['evening_star'] = {
             'signal': talib.CDLEVENINGSTAR(open_prices, high_prices, low_prices, close_prices),
-            'reliability': 0.53,
-            'profit_potential': 0.42
+            'reliability': 0.72,
+            'profit_potential': 1.15
         }
         
         return patterns
