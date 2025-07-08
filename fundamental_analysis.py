@@ -691,8 +691,5 @@ class FundamentalAnalyzer:
         return {k: len(v) for k, v in categories.items()}
     
 if __name__ == "__main__":
-    ticker = yf.Ticker('AAPL')
-    info = ticker.info
-
     fundamental = FundamentalAnalyzer()
-    fundamental._analyze_valuation_metrics(ticker, info)
+    print(fundamental.analyze_comprehensive_fundamentals('TSLA'))
