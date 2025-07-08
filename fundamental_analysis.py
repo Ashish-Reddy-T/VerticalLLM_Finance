@@ -275,7 +275,7 @@ class FundamentalAnalyzer:
                         reliability=0.7
                     ))
         except Exception as e:
-            print("ERROR: Couldn't find data for quarterly financials: {e}. Skipping ...")
+            print(f"ERROR: Couldn't find data for quarterly financials: {e}. Skipping ...")
         
         return metrics
 
