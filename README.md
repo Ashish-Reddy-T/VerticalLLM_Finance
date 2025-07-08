@@ -1,14 +1,56 @@
 # Vertical LLM for Finance
 
-Building a Vertical Large Language Model in the stock market sector:
+A Python-based assistant for analyzing equities using local large language models and traditional market data sources.
 
-- Using yahoo's financial data: `yfinance`. 
-- Using local LLM: `Mistral 7b q4_K_M`.
-- Be tuned as further developments are underway.
+## Installation
 
----
+1. Install **Python 3.10** or later.
+2. (Recommended) Create a virtual environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Configuration
+
+API keys and model paths are stored in `config.yaml`. Copy the provided template and fill in your own keys:
+
+```bash
+cp config_template.yaml config.yaml
+```
+
+Then edit `config.yaml` and add your credentials for Alpha Vantage, Finnhub and News API.
+
+## Repository Structure
+
+- `agent.py` – orchestrates the language model and analysis tools
+- `financial_tools.py` – helpers for retrieving market data
+- `fundamental_analysis.py` – fundamental metrics and scoring
+- `technical_analysis.py` – technical indicator calculations
+- `sentiment_analysis.py` – sentiment scoring
+- `self_rag.py` / `rag_core.py` – retrieval augmented generation components
+- `data/` – FAISS index for RAG
+- `documents/` – example PDF documents for ingestion
+- `main.py` – simple chat interface
+
+## Usage
+
+Start an interactive session:
+```bash
+python main.py
+```
+Follow the prompts to ask questions about a stock. Example tickers can be found in `stock_list.json`.
+
+## Disclaimer
+
+All outputs from this project are provided for informational purposes only and do not constitute financial advice. Always conduct your own research before making investment decisions.
 
 ## Example Output
+
 
 ```
 Agent: Loading configuration...
