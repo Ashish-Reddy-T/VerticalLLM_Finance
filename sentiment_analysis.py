@@ -230,7 +230,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"News sentiment analysis error: {e}")
+            print(f"ERROR: News sentiment analysis error: {e}")
             return None
 
     def _analyze_analyst_sentiment(self, symbol: str) -> Optional[SentimentSource]:
@@ -312,7 +312,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"Analyst sentiment analysis error: {e}")
+            print(f"ERROR: Analyst sentiment analysis error: {e}")
             return None
 
     def _analyze_social_media_sentiment(self, symbol: str, company_name: str) -> Optional[SentimentSource]:
@@ -357,7 +357,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"Social media sentiment analysis error: {e}")
+            print(f"ERROR: Social media sentiment analysis error: {e}")
             return None
 
     def _analyze_insider_trading(self, symbol: str) -> Optional[SentimentSource]:
@@ -425,7 +425,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"Insider trading analysis error: {e}")
+            print(f"ERROR: Insider trading analysis error: {e}")
             return None
 
     def _analyze_options_flow(self, symbol: str) -> Optional[SentimentSource]:
@@ -501,7 +501,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"Options flow analysis error: {e}")
+            print(f"ERROR: Options flow analysis error: {e}")
             return None
 
     def _analyze_institutional_activity(self, symbol: str) -> Optional[SentimentSource]:
@@ -558,7 +558,7 @@ class SentimentAnalyzer:
             )
             
         except Exception as e:
-            print(f"Institutional activity analysis error: {e}")
+            print(f"ERROR: Institutional activity analysis error: {e}")
             return None
 
     def _get_finbert_sentiment(self, text: str) -> Optional[Dict]:
@@ -581,7 +581,7 @@ class SentimentAnalyzer:
                 "score": round(probs[1].item() - probs[2].item(), 3)  # positive - negative
             }
         except Exception as e:
-            print(f"FinBERT sentiment error: {e}")
+            print(f"ERROR: FinBERT sentiment error: {e}")
             return None
 
     def _calculate_overall_sentiment(self, sources: List[SentimentSource]) -> Dict:
