@@ -32,7 +32,7 @@ print("Agent: Initializing Sentiment Analysis system...")
 sentiment_analyzer = SentimentAnalyzer()
 
 print("Agent: Initializing Self-RAG system...")
-# self_rag = SelfRAG(llm)
+self_rag = SelfRAG(llm)
 
 # Enhanced Tools with comprehensive analysis systems
 tools = {
@@ -278,10 +278,8 @@ def execute_comprehensive_technical_analysis(company: str, timeframes: list = ['
         if not symbol:
             return {"ERROR": f"Could not find ticker for: {company}"}
         
-        try:
-            print(f"Agent: Executing comprehensive technical analysis for {symbol}")
-            
-            # Use the new TechnicalAnalyzer
+        try:            
+            # Use TechnicalAnalyzer
             analysis_result = technical_analyzer.analyze_comprehensive_technicals(symbol, timeframes)
             
             if "ERROR" in str(analysis_result):
@@ -571,7 +569,7 @@ USER QUERY: "{query}"
 
 Provide a clear, comprehensive response: [/INST]"""
     
-    print("🤖 Agent: Generating ...")
+    print("\n🤖 Agent: Generating ...")
     response = llm.create_chat_completion(
         messages=[{"role": "user", "content": synthesis_prompt}],
         max_tokens=800,  # Increased for more detailed responses

@@ -99,6 +99,12 @@ class FundamentalAnalyzer:
 
             res = {
                 "symbol": symbol,
+                "company_name": info.get('longName', symbol),
+                "sector": info.get('sector', 'Unknown'),
+                "industry": info.get('industry', 'Unknown'),
+                "fundamental_metrics": all_metrics,
+                "category_breakdown": self._categorize_metrics(all_metrics),
+                "fundamental_analysis": fundamental_analysis,
                 "recommendation": fundamental_analysis['recommendation'],
                 "confidence": fundamental_analysis['confidence'],
                 "score": fundamental_analysis['total_score']
