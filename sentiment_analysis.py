@@ -39,8 +39,7 @@ class SentimentAnalyzer:
         self.api_keys = self.config.get('api_keys', {})
         
         # Initialize FinBERT for financial sentiment analysis
-        print("INFO: Trying to load FinBERT model")
-        #self._init_finbert()
+        self._init_finbert()
         
         # Weights for different sentiment sources
         self.source_weights = {
@@ -87,37 +86,43 @@ class SentimentAnalyzer:
             # 1. News Sentiment
             news_sentiment = self._analyze_news_sentiment(company_name, days_back)
             if news_sentiment:
+                print("\nINFO: Successfully retrieved News Sentiments.")
                 sentiment_sources.append(news_sentiment)
             
             # 2. Analyst Ratings and Price Targets
             analyst_sentiment = self._analyze_analyst_sentiment(symbol)
             if analyst_sentiment:
+                print("INFO: Successfully retrieved Analyst Recommendations.")
                 sentiment_sources.append(analyst_sentiment)
             
             # 3. Social Media Sentiment
             social_sentiment = self._analyze_social_media_sentiment(symbol, company_name)
             if social_sentiment:
+                print("INFO: Successfully retrieved Social Media Analyses.")
                 sentiment_sources.append(social_sentiment)
             
             # 4. Insider Trading Activity
             insider_sentiment = self._analyze_insider_trading(symbol)
             if insider_sentiment:
+                print("INFO: Successfully retrieved Insider Sentiments.")
                 sentiment_sources.append(insider_sentiment)
             
             # 5. Options Flow Analysis
             options_sentiment = self._analyze_options_flow(symbol)
             if options_sentiment:
+                print("INFO: Successfully retrieved Option Flow Sentiments.")
                 sentiment_sources.append(options_sentiment)
             
             # 6. Institutional Activity
             institutional_sentiment = self._analyze_institutional_activity(symbol)
             if institutional_sentiment:
+                print("INFO: Successfully retrieved Instituitional Sentiments.\n")
                 sentiment_sources.append(institutional_sentiment)
             
             # Calculate overall sentiment
             overall_sentiment = self._calculate_overall_sentiment(sentiment_sources)
-            
-            return {
+
+            res = {
                 "symbol": symbol,
                 "company_name": company_name,
                 "analysis_date": datetime.now().isoformat(),
@@ -129,6 +134,8 @@ class SentimentAnalyzer:
                 "confidence": overall_sentiment['confidence'],
                 "sentiment_score": overall_sentiment['weighted_score']
             }
+            
+            return res
             
         except Exception as e:
             return {"ERROR": f"Comprehensive sentiment analysis failed: {e}"}
@@ -155,7 +162,6 @@ class SentimentAnalyzer:
             
             all_articles = []
             
-            print("INFO: Starting to get articles")
             for query in queries:
                 url = "https://newsapi.org/v2/everything"
                 params = {
@@ -193,7 +199,6 @@ class SentimentAnalyzer:
             # Analyze sentiment for each article
             sentiments = []
             
-            print("INFO: Getting FinBERT Sentiment Scores for articles")
             for article in unique_articles[:50]:  # Limit to top 50
                 title = article.get('title', '')
                 description = article.get('description', '')
@@ -234,7 +239,6 @@ class SentimentAnalyzer:
                 }
             )
 
-            print("INFO: Successfully analyzed news sentiment ...")
             return res
             
         except Exception as e:
@@ -306,7 +310,6 @@ class SentimentAnalyzer:
                     avg_sentiment = weighted_sum / total_ratings
                     sentiment_scores.append(avg_sentiment)
                     details['recommendations_count'] = total_ratings
-                    print(f"Processed {total_ratings} ratings with average sentiment: {avg_sentiment}")
             
             # Analyze price targets
             if analyst_price_targets is not None and current_price:
@@ -643,7 +646,7 @@ class SentimentAnalyzer:
         source_contributions = {}
         
         for source in sources:
-            weight = self.source_weights.get(source.source_type, 0.1)
+            weight = self.source_weights.get(source.source_type)
             effective_weight = weight * source.confidence * source.reliability
             
             contribution = source.sentiment_score * effective_weight
@@ -674,7 +677,7 @@ class SentimentAnalyzer:
         
         confidence = min(abs(final_score) * 2, 1.0)
         
-        return {
+        res = {
             'weighted_score': final_score,
             'recommendation': recommendation,
             'confidence': confidence,
@@ -682,6 +685,8 @@ class SentimentAnalyzer:
             'sources_analyzed': len(sources),
             'reasoning': f"Sentiment score: {final_score:.3f} from {len(sources)} sources with {confidence:.1%} confidence"
         }
+
+        return res
 
     def _categorize_sources(self, sources: List[SentimentSource]) -> Dict:
         """Categorize sentiment sources for analysis"""
@@ -697,8 +702,5 @@ class SentimentAnalyzer:
     
 if __name__ == "__main__":
     alas = SentimentAnalyzer()
-    alas._analyze_institutional_activity('AAPL')
-
-    # ticker = yf.Ticker('AAPL')
-    # inst = ticker.institutional_holders
-    # print(inst)
+    s = alas.analyze_comprehensive_sentiment('AAPL', 'AAPL', 14)
+    print(s)
