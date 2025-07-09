@@ -10,8 +10,6 @@ A Python-based assistant for analyzing equities using local large language model
 - `technical_analysis.py` – technical indicator calculations
 - `sentiment_analysis.py` – sentiment scoring
 - `self_rag.py` / `rag_core.py` – retrieval augmented generation components
-- `data/` – FAISS index for RAG
-- `documents/` – example PDF documents for ingestion
 - `main.py` – simple chat interface
 
 ## Usage
