@@ -10,7 +10,7 @@ from enum import Enum
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
-from utils import get_config
+from utils import get_keys
 
 class SentimentSignal(Enum):
     VERY_POSITIVE = 2
@@ -33,8 +33,6 @@ class SentimentAnalyzer:
     """Comprehensive multi-source sentiment analysis system"""
     
     def __init__(self):
-        self.config = get_config()
-        self.api_keys = self.config.get('api_keys', {})
         
         # Initialize FinBERT for financial sentiment analysis
         self._init_finbert()
@@ -83,7 +81,7 @@ class SentimentAnalyzer:
             # 1. News Sentiment
             news_sentiment = self._analyze_news_sentiment(company_name, days_back)
             if news_sentiment:
-                print("\nINFO: Successfully retrieved News Sentiments.")
+                print("INFO: Successfully retrieved News Sentiments.")
                 sentiment_sources.append(news_sentiment)
             
             # 2. Analyst Ratings and Price Targets
@@ -113,7 +111,7 @@ class SentimentAnalyzer:
             # 6. Institutional Activity
             institutional_sentiment = self._analyze_institutional_activity(symbol)
             if institutional_sentiment:
-                print("INFO: Successfully retrieved Instituitional Sentiments.\n")
+                print("INFO: Successfully retrieved Instituitional Sentiments.")
                 sentiment_sources.append(institutional_sentiment)
             
             # Calculate overall sentiment
@@ -140,7 +138,7 @@ class SentimentAnalyzer:
     def _analyze_news_sentiment(self, company_name: str, days_back: int) -> Optional[SentimentSource]:
         """Enhanced news sentiment analysis with multiple sources"""
         try:
-            news_api_key = self.api_keys.get('news')
+            news_api_key = get_keys('NEWSAPI')
             if not news_api_key:
                 print("WARNING: News API key not found")
                 return None

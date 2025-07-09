@@ -1,5 +1,10 @@
 __pycache__/
 *.DS_Store
 *.pyc
-fin_slmsample.ipynb
-config.yaml
+.env
+
+fin_slm/
+data/
+documents/
+
+sample.ipynb

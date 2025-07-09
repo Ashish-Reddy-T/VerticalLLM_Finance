@@ -39,7 +39,6 @@ def search_yahoo_api(company_name: str) -> str | None:
         }
         """
         if data.get('quotes'):
-                print(f"Agent: Found symbol: {data['quotes'][0]['symbol']}")
                 return data['quotes'][0]['symbol']
         return None
     
