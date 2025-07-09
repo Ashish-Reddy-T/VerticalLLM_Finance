@@ -1,6 +1,6 @@
 from llama_cpp import Llama
 
-from utils import get_config
+from utils import get_keys
 from financial_tools import search_yahoo_api, get_stock_quote
 from technical_analysis import TechnicalAnalyzer
 from fundamental_analysis import FundamentalAnalyzer
@@ -9,10 +9,9 @@ from self_rag import SelfRAG
 
 # Initialize LLM
 print("Agent: Loading configuration...")
-config_file = get_config()
-model_path = config_file.get('model', {}).get('path')
-
 print("Agent: Initializing Mistral 7B model...\n")
+
+model_path = get_keys("PATH")
 llm = Llama(
     model_path=model_path,
     n_gpu_layers=-1,

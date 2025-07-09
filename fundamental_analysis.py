@@ -3,8 +3,6 @@ from typing import Dict, List
 from dataclasses import dataclass
 from enum import Enum
 
-from utils import get_config
-
 class FundamentalSignal(Enum):
     STRONG_BUY = 2
     BUY = 1
@@ -26,9 +24,6 @@ class FundamentalAnalyzer:
     """Comprehensive fundamental analysis system"""
     
     def __init__(self):
-        self.config = get_config()
-        self.api_keys = self.config.get('api_keys', {})
-        
         # Weights for different fundamental categories
         self.category_weights = {
             'valuation_metrics': 0.25,      # P/E, P/B, P/S ratios
