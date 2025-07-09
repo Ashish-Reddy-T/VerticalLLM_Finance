@@ -2,29 +2,6 @@
 
 A Python-based assistant for analyzing equities using local large language models and traditional market data sources.
 
-## Installation
-
-1. Install **Python 3.10** or later.
-2. (Recommended) Create a virtual environment:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Configuration
-
-API keys and model paths are stored in `config.yaml`. Copy the provided template and fill in your own keys:
-
-```bash
-cp config_template.yaml config.yaml
-```
-
-Then edit `config.yaml` and add your credentials for Alpha Vantage, Finnhub and News API.
-
 ## Repository Structure
 
 - `agent.py` – orchestrates the language model and analysis tools
@@ -43,7 +20,7 @@ Start an interactive session:
 ```bash
 python main.py
 ```
-Follow the prompts to ask questions about a stock. Example tickers can be found in `stock_list.json`.
+Follow the prompts to ask questions about a stock.
 
 ## Disclaimer
 
