@@ -4,6 +4,11 @@ from typing import Dict, List
 from dataclasses import dataclass
 from enum import Enum
 
+import math
+import statistics
+from collections import deque
+
+
 class SignalType(Enum):
     BULLISH = 1
     BEARISH = -1
@@ -19,6 +24,22 @@ class TechnicalSignal:
     timeframe: str
     indicator: str
     details: dict = None
+
+class StrengthNormalizer:
+    """
+    Rolling Z-score + logistic rescaler.
+    Keeps indicator ‘strength’ on a 0–1 probability-like scale
+    even as volatility regimes change.
+    """
+    def __init__(self, window: int = 250):          # ≈ 1 trading year
+        self.values = deque(maxlen=window)
+
+    def transform(self, value: float) -> float:
+        self.values.append(value)
+        μ = statistics.fmean(self.values)
+        σ = statistics.stdev(self.values) if len(self.values) > 1 else 1.0
+        z = (value - μ) / (σ or 1.0)
+        return 1 / (1 + math.exp(-z))               # logistic squeeze
 
 class TechnicalAnalyzer:
     """Comprehensive technical analysis with multi-timeframe confluence"""
@@ -40,7 +61,8 @@ class TechnicalAnalyzer:
         }
         
         # Minimum confluence score for actionable signals
-        self.min_confluence_threshold = 0.15
+        self.normalizer = StrengthNormalizer(window=250)
+        self.min_confluence_threshold = 0.60
 
     def analyze_comprehensive_technicals(self, symbol: str, timeframes: List[str] = ['15m', '1h', '4h', '1d']) -> Dict:
         """
@@ -58,22 +80,27 @@ class TechnicalAnalyzer:
         
         # 1. Trend Indicators
         trend_signals = self._analyze_trend_indicators(multi_data)
+        print("INFO: Successfully retrieved Trend Signals.")
         all_signals.extend(trend_signals)
         
         # 2. Momentum Oscillators  
         momentum_signals = self._analyze_momentum_indicators(multi_data)
+        print("INFO: Successfully retrieved Momentum Signals.")
         all_signals.extend(momentum_signals)
         
         # 3. Volume Indicators
         volume_signals = self._analyze_volume_indicators(multi_data)
+        print("INFO: Successfully retrieved Volume Signals.")
         all_signals.extend(volume_signals)
         
         # 4. Volatility Indicators
         volatility_signals = self._analyze_volatility_indicators(multi_data)
+        print("INFO: Successfully retrieved Volatility Signals.")
         all_signals.extend(volatility_signals)
         
         # 5. Candlestick Patterns
         candlestick_signals = self._analyze_candlestick_patterns(multi_data)
+        print("INFO: Successfully retrieved Candlestick Signals.")
         all_signals.extend(candlestick_signals)
         
         # Calculate confluence
@@ -81,8 +108,8 @@ class TechnicalAnalyzer:
         
         # Risk-reward analysis
         risk_reward = self._calculate_risk_reward_ratio(multi_data, confluence_analysis)
-        
-        return {
+
+        res = {
             "symbol": symbol,
             "timeframes_analyzed": list(multi_data.keys()),
             "total_signals": len(all_signals),
@@ -93,6 +120,8 @@ class TechnicalAnalyzer:
             "confidence": confluence_analysis['confidence'],
             "signal_strength": confluence_analysis['confluence_score']
         }
+
+        return res
 
     def get_multi_timeframe_data(self, symbol: str, timeframes: List[str]) -> Dict:
         """Enhanced multi-timeframe data fetching with technical indicators pre-calculated"""
@@ -226,7 +255,7 @@ class TechnicalAnalyzer:
             vpt_signal = self._analyze_volume_price_trend(df, tf)
             if vpt_signal:
                 signals.append(vpt_signal)
-        print(signals)
+
         return signals
 
     def _analyze_volatility_indicators(self, multi_data: Dict) -> List[TechnicalSignal]:
@@ -247,7 +276,7 @@ class TechnicalAnalyzer:
             atr_signal = self._analyze_atr(df, tf)
             if atr_signal:
                 signals.append(atr_signal)
-        
+
         return signals
 
     def _analyze_candlestick_patterns(self, multi_data: Dict) -> List[TechnicalSignal]:
@@ -276,7 +305,7 @@ class TechnicalAnalyzer:
                         indicator=f"candlestick_{pattern_name}",
                         details={'pattern': pattern_name, 'signal_value': latest_signal}
                     ))
-        
+
         return signals
 
     # -------------------
@@ -701,7 +730,7 @@ class TechnicalAnalyzer:
         
         for signal in signals:
             # Weight by timeframe and indicator category
-            tf_weight = self.timeframe_weights.get(signal.timeframe, 0.1)
+            tf_weight = self.timeframe_weights.get(signal.timeframe)
             
             # Determine indicator category weight
             category_weight = 0.2  # Default
@@ -715,9 +744,11 @@ class TechnicalAnalyzer:
                 category_weight = self.indicator_weights['volatility_indicators']
             elif 'candlestick' in signal.indicator:
                 category_weight = self.indicator_weights['candlestick_patterns']
-            
+
             # Calculate weighted signal strength
-            weighted_strength = signal.strength * signal.confidence * tf_weight * category_weight
+            raw_strength = signal.strength * signal.confidence * tf_weight * category_weight
+
+            weighted_strength = self.normalizer.transform(raw_strength)
             
             if signal.signal_type == SignalType.BULLISH:
                 bullish_score += weighted_strength
@@ -737,8 +768,8 @@ class TechnicalAnalyzer:
         else:
             recommendation = 'HOLD'
             confidence = 0
-        
-        return {
+
+        res = {
             'bullish_signals': bullish_score,
             'bearish_signals': bearish_score,
             'confluence_score': total_score,
@@ -755,6 +786,8 @@ class TechnicalAnalyzer:
             ],
             'reasoning': f"Technical confluence score: {total_score:.3f} ({'above' if total_score >= self.min_confluence_threshold else 'below'} threshold of {self.min_confluence_threshold})"
         }
+
+        return res
 
     def _categorize_signals(self, signals: List[TechnicalSignal]) -> Dict:
         """Categorize signals by type for analysis"""
@@ -829,6 +862,5 @@ class TechnicalAnalyzer:
 
 if __name__ == "__main__":
     ta = TechnicalAnalyzer()
-    
-    multi_data = ta.get_multi_timeframe_data('AAPL', ['15m', '1h', '4h', '1d'])
-    ta._analyze_volume_indicators(multi_data)
+    a = ta.analyze_comprehensive_technicals("AAPL")
+    print(a)
