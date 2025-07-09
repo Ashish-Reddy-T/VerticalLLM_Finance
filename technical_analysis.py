@@ -175,11 +175,11 @@ class TechnicalAnalyzer:
             if ma_signal:
                 signals.append(ma_signal)
             
-            # 3. ADX (if we have enough data)
+            # 3. ADX
             adx_signal = self._analyze_adx(df, tf)
             if adx_signal:
                 signals.append(adx_signal)
-        
+
         return signals
 
     def _analyze_momentum_indicators(self, multi_data: Dict) -> List[TechnicalSignal]:
@@ -205,7 +205,7 @@ class TechnicalAnalyzer:
             williams_signal = self._analyze_williams_r(df, tf)
             if williams_signal:
                 signals.append(williams_signal)
-        
+
         return signals
 
     def _analyze_volume_indicators(self, multi_data: Dict) -> List[TechnicalSignal]:
@@ -226,7 +226,7 @@ class TechnicalAnalyzer:
             vpt_signal = self._analyze_volume_price_trend(df, tf)
             if vpt_signal:
                 signals.append(vpt_signal)
-        
+        print(signals)
         return signals
 
     def _analyze_volatility_indicators(self, multi_data: Dict) -> List[TechnicalSignal]:
@@ -279,7 +279,9 @@ class TechnicalAnalyzer:
         
         return signals
 
-    # Individual Indicator Analysis Methods
+    # -------------------
+
+    # 1. Trend Indicators
     def _analyze_macd(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
         """Analyze MACD signals"""
         if len(df) < 26 or df['MACD'].isna().iloc[-1]:
@@ -311,38 +313,6 @@ class TechnicalAnalyzer:
                 reliability=0.65,
                 timeframe=tf,
                 indicator="macd_crossover"
-            )
-        
-        return None
-
-    def _analyze_rsi(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
-        """Analyze RSI signals"""
-        if df['RSI'].isna().iloc[-1]:
-            return None
-        
-        rsi = df['RSI'].iloc[-1]
-        
-        if rsi <= 30:  # Oversold
-            strength = (30 - rsi) / 30  # Stronger signal the lower RSI goes
-            return TechnicalSignal(
-                signal_type=SignalType.BULLISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.58,
-                timeframe=tf,
-                indicator="rsi_oversold",
-                details={'rsi_value': rsi}
-            )
-        elif rsi >= 70:  # Overbought
-            strength = (rsi - 70) / 30  # Stronger signal the higher RSI goes
-            return TechnicalSignal(
-                signal_type=SignalType.BEARISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.58,
-                timeframe=tf,
-                indicator="rsi_overbought",
-                details={'rsi_value': rsi}
             )
         
         return None
@@ -381,81 +351,7 @@ class TechnicalAnalyzer:
             )
         
         return None
-
-    def _analyze_bollinger_bands(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
-        """Analyze Bollinger Bands signals"""
-        if df['BB_upper'].isna().iloc[-1]:
-            return None
-        
-        close = df['Close'].iloc[-1]
-        bb_upper = df['BB_upper'].iloc[-1]
-        bb_lower = df['BB_lower'].iloc[-1]
-        bb_middle = df['BB_middle'].iloc[-1]
-        
-        # Calculate position within bands
-        bb_position = (close - bb_lower) / (bb_upper - bb_lower)
-        
-        if close <= bb_lower:  # Below lower band - oversold
-            strength = min((bb_lower - close) / bb_lower * 10, 1.0)
-            return TechnicalSignal(
-                signal_type=SignalType.BULLISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.55,
-                timeframe=tf,
-                indicator="bb_oversold",
-                details={'bb_position': bb_position}
-            )
-        elif close >= bb_upper:  # Above upper band - overbought
-            strength = min((close - bb_upper) / bb_upper * 10, 1.0)
-            return TechnicalSignal(
-                signal_type=SignalType.BEARISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.55,
-                timeframe=tf,
-                indicator="bb_overbought",
-                details={'bb_position': bb_position}
-            )
-        
-        return None
-
-    def _analyze_stochastic(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
-        """Analyze Stochastic Oscillator"""
-        if df['STOCH_K'].isna().iloc[-1]:
-            return None
-        
-        k = df['STOCH_K'].iloc[-1]
-        d = df['STOCH_D'].iloc[-1]
-        k_prev = df['STOCH_K'].iloc[-2] if len(df) > 1 else k
-        d_prev = df['STOCH_D'].iloc[-2] if len(df) > 1 else d
-        
-        # Oversold with bullish crossover
-        if k <= 20 and d <= 20 and k > d and k_prev <= d_prev:
-            strength = (20 - min(k, d)) / 20
-            return TechnicalSignal(
-                signal_type=SignalType.BULLISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.52,
-                timeframe=tf,
-                indicator="stoch_oversold_cross"
-            )
-        # Overbought with bearish crossover
-        elif k >= 80 and d >= 80 and k < d and k_prev >= d_prev:
-            strength = (max(k, d) - 80) / 20
-            return TechnicalSignal(
-                signal_type=SignalType.BEARISH,
-                strength=strength,
-                confidence=0.6,
-                reliability=0.52,
-                timeframe=tf,
-                indicator="stoch_overbought_cross"
-            )
-        
-        return None
-
-    # Additional indicator methods (simplified for space)
+    
     def _analyze_adx(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
         """Analyze ADX for trend strength"""
         try:
@@ -491,6 +387,74 @@ class TechnicalAnalyzer:
             pass
         return None
 
+    # 2. Momentum Indicators
+    def _analyze_rsi(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
+        """Analyze RSI signals"""
+        if df['RSI'].isna().iloc[-1]:
+            return None
+        
+        rsi = df['RSI'].iloc[-1]
+        
+        if rsi <= 30:  # Oversold
+            strength = (30 - rsi) / 30  # Stronger signal the lower RSI goes
+            return TechnicalSignal(
+                signal_type=SignalType.BULLISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.58,
+                timeframe=tf,
+                indicator="rsi_oversold",
+                details={'rsi_value': rsi}
+            )
+        elif rsi >= 70:  # Overbought
+            strength = (rsi - 70) / 30  # Stronger signal the higher RSI goes
+            return TechnicalSignal(
+                signal_type=SignalType.BEARISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.58,
+                timeframe=tf,
+                indicator="rsi_overbought",
+                details={'rsi_value': rsi}
+            )
+        
+        return None
+    
+    def _analyze_stochastic(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
+        """Analyze Stochastic Oscillator"""
+        if df['STOCH_K'].isna().iloc[-1]:
+            return None
+        
+        k = df['STOCH_K'].iloc[-1]
+        d = df['STOCH_D'].iloc[-1]
+        k_prev = df['STOCH_K'].iloc[-2] if len(df) > 1 else k
+        d_prev = df['STOCH_D'].iloc[-2] if len(df) > 1 else d
+        
+        # Oversold with bullish crossover
+        if k <= 20 and d <= 20 and k > d and k_prev <= d_prev:
+            strength = (20 - min(k, d)) / 20
+            return TechnicalSignal(
+                signal_type=SignalType.BULLISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.52,
+                timeframe=tf,
+                indicator="stoch_oversold_cross"
+            )
+        # Overbought with bearish crossover
+        elif k >= 80 and d >= 80 and k < d and k_prev >= d_prev:
+            strength = (max(k, d) - 80) / 20
+            return TechnicalSignal(
+                signal_type=SignalType.BEARISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.52,
+                timeframe=tf,
+                indicator="stoch_overbought_cross"
+            )
+        
+        return None
+    
     def _analyze_williams_r(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
         """Analyze Williams %R"""
         try:
@@ -520,7 +484,8 @@ class TechnicalAnalyzer:
         except:
             pass
         return None
-
+    
+    # 3. Volume Indicators
     def _analyze_obv(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
         """Analyze On-Balance Volume"""
         try:
@@ -583,6 +548,45 @@ class TechnicalAnalyzer:
         except:
             pass
         return None
+    
+    # 4. Volatility Indicators
+    def _analyze_bollinger_bands(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
+        """Analyze Bollinger Bands signals"""
+        if df['BB_upper'].isna().iloc[-1]:
+            return None
+        
+        close = df['Close'].iloc[-1]
+        bb_upper = df['BB_upper'].iloc[-1]
+        bb_lower = df['BB_lower'].iloc[-1]
+        bb_middle = df['BB_middle'].iloc[-1]
+        
+        # Calculate position within bands
+        bb_position = (close - bb_lower) / (bb_upper - bb_lower)
+        
+        if close <= bb_lower:  # Below lower band - oversold
+            strength = min((bb_lower - close) / bb_lower * 10, 1.0)
+            return TechnicalSignal(
+                signal_type=SignalType.BULLISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.55,
+                timeframe=tf,
+                indicator="bb_oversold",
+                details={'bb_position': bb_position}
+            )
+        elif close >= bb_upper:  # Above upper band - overbought
+            strength = min((close - bb_upper) / bb_upper * 10, 1.0)
+            return TechnicalSignal(
+                signal_type=SignalType.BEARISH,
+                strength=strength,
+                confidence=0.6,
+                reliability=0.55,
+                timeframe=tf,
+                indicator="bb_overbought",
+                details={'bb_position': bb_position}
+            )
+        
+        return None
 
     def _analyze_atr(self, df: pd.DataFrame, tf: str) -> TechnicalSignal:
         """Analyze ATR for volatility signals"""
@@ -608,6 +612,7 @@ class TechnicalAnalyzer:
             pass
         return None
 
+    # 5. Candlestick Patterns
     def _detect_candlestick_patterns(self, data: pd.DataFrame) -> Dict:
         """Detect candlestick patterns (from original code)"""
         patterns = {}
@@ -675,6 +680,8 @@ class TechnicalAnalyzer:
         }
         
         return patterns
+
+    # -------------------
 
     def _calculate_technical_confluence(self, signals: List[TechnicalSignal]) -> Dict:
         """Calculate confluence across all technical signals"""
@@ -818,3 +825,10 @@ class TechnicalAnalyzer:
             "trade_recommendation": "EXECUTE" if risk_reward_ratio >= 1.5 else "WAIT",
             "risk_level": "LOW" if risk_reward_ratio >= 2.0 else "MEDIUM" if risk_reward_ratio >= 1.5 else "HIGH"
         }
+    
+
+if __name__ == "__main__":
+    ta = TechnicalAnalyzer()
+    
+    multi_data = ta.get_multi_timeframe_data('AAPL', ['15m', '1h', '4h', '1d'])
+    ta._analyze_volume_indicators(multi_data)
