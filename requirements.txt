@@ -7,3 +7,5 @@ PyMuPDF
 sentence-transformers
 faiss-cpu
 TA-Lib
+backtrader
+matplotlib
