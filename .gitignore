@@ -2,7 +2,11 @@ __pycache__/
 *.DS_Store
 *.pyc
 
+*.log
+
 .env
+
+test*
 
 fin_slm/
 data/
