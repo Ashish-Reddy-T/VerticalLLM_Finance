@@ -80,27 +80,27 @@ class TechnicalAnalyzer:
         
         # 1. Trend Indicators
         trend_signals = self._analyze_trend_indicators(multi_data)
-        print("INFO: Successfully retrieved Trend Signals.")
+        #print("INFO: Successfully retrieved Trend Signals.")
         all_signals.extend(trend_signals)
         
         # 2. Momentum Oscillators  
         momentum_signals = self._analyze_momentum_indicators(multi_data)
-        print("INFO: Successfully retrieved Momentum Signals.")
+        #print("INFO: Successfully retrieved Momentum Signals.")
         all_signals.extend(momentum_signals)
         
         # 3. Volume Indicators
         volume_signals = self._analyze_volume_indicators(multi_data)
-        print("INFO: Successfully retrieved Volume Signals.")
+        #print("INFO: Successfully retrieved Volume Signals.")
         all_signals.extend(volume_signals)
         
         # 4. Volatility Indicators
         volatility_signals = self._analyze_volatility_indicators(multi_data)
-        print("INFO: Successfully retrieved Volatility Signals.")
+        #print("INFO: Successfully retrieved Volatility Signals.")
         all_signals.extend(volatility_signals)
         
         # 5. Candlestick Patterns
         candlestick_signals = self._analyze_candlestick_patterns(multi_data)
-        print("INFO: Successfully retrieved Candlestick Signals.")
+        #print("INFO: Successfully retrieved Candlestick Signals.")
         all_signals.extend(candlestick_signals)
         
         # Calculate confluence
