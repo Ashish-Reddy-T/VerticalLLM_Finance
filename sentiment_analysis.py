@@ -81,37 +81,37 @@ class SentimentAnalyzer:
             # 1. News Sentiment
             news_sentiment = self._analyze_news_sentiment(company_name, days_back)
             if news_sentiment:
-                print("INFO: Successfully retrieved News Sentiments.")
+                #print("INFO: Successfully retrieved News Sentiments.")
                 sentiment_sources.append(news_sentiment)
             
             # 2. Analyst Ratings and Price Targets
             analyst_sentiment = self._analyze_analyst_sentiment(symbol)
             if analyst_sentiment:
-                print("INFO: Successfully retrieved Analyst Recommendations.")
+                #print("INFO: Successfully retrieved Analyst Recommendations.")
                 sentiment_sources.append(analyst_sentiment)
             
             # 3. Social Media Sentiment
             social_sentiment = self._analyze_social_media_sentiment(symbol, company_name)
             if social_sentiment:
-                print("INFO: Successfully retrieved Social Media Analyses.")
+                #print("INFO: Successfully retrieved Social Media Analyses.")
                 sentiment_sources.append(social_sentiment)
             
             # 4. Insider Trading Activity
             insider_sentiment = self._analyze_insider_trading(symbol)
             if insider_sentiment:
-                print("INFO: Successfully retrieved Insider Sentiments.")
+                #print("INFO: Successfully retrieved Insider Sentiments.")
                 sentiment_sources.append(insider_sentiment)
             
             # 5. Options Flow Analysis
             options_sentiment = self._analyze_options_flow(symbol)
             if options_sentiment:
-                print("INFO: Successfully retrieved Option Flow Sentiments.")
+                #print("INFO: Successfully retrieved Option Flow Sentiments.")
                 sentiment_sources.append(options_sentiment)
             
             # 6. Institutional Activity
             institutional_sentiment = self._analyze_institutional_activity(symbol)
             if institutional_sentiment:
-                print("INFO: Successfully retrieved Instituitional Sentiments.")
+                #print("INFO: Successfully retrieved Instituitional Sentiments.")
                 sentiment_sources.append(institutional_sentiment)
             
             # Calculate overall sentiment
