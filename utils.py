@@ -1,5 +1,4 @@
-import os
-import yaml
+import os, yaml,logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 
@@ -34,3 +33,30 @@ def get_keys(key):
         return PATH
     else:
         return None
+    
+def setup_logger():
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    
+    log_file = Path(__file__).parent / "backtest.log"
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setLevel(logging.DEBUG)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    logger.info("Logger has been set up.")
+    return logger
