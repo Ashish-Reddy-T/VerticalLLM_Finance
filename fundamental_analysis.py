@@ -61,32 +61,32 @@ class FundamentalAnalyzer:
             
             # 1. Valuation Metrics
             valuation_metrics = self._analyze_valuation_metrics(ticker, info)
-            print("INFO: Successfully retrieved Valuation Metrics.")
+            #print("INFO: Successfully retrieved Valuation Metrics.")
             all_metrics.extend(valuation_metrics)
             
             # 2. Profitability Metrics
             profitability_metrics = self._analyze_profitability_metrics(ticker, info)
-            print("INFO: Successfully retrieved Profitability Metrics.")
+            #print("INFO: Successfully retrieved Profitability Metrics.")
             all_metrics.extend(profitability_metrics)
             
             # 3. Growth Metrics
             growth_metrics = self._analyze_growth_metrics(ticker, info)
-            print("INFO: Successfully retrieved Growth Metrics.")
+            #print("INFO: Successfully retrieved Growth Metrics.")
             all_metrics.extend(growth_metrics)
             
             # 4. Financial Health
             health_metrics = self._analyze_financial_health(ticker, info)
-            print("INFO: Successfully retrieved Health Metrics.")
+            #print("INFO: Successfully retrieved Health Metrics.")
             all_metrics.extend(health_metrics)
             
             # 5. Dividend Analysis
             dividend_metrics = self._analyze_dividend_metrics(ticker, info)
-            print("INFO: Successfully retrieved Dividend Metrics.")
+            #print("INFO: Successfully retrieved Dividend Metrics.")
             all_metrics.extend(dividend_metrics)
             
             # 6. Market Metrics
             market_metrics = self._analyze_market_metrics(ticker, info)
-            print("INFO: Successfully retrieved Market Metrics.")
+            #print("INFO: Successfully retrieved Market Metrics.")
             all_metrics.extend(market_metrics)
             
             # Calculate overall fundamental score
