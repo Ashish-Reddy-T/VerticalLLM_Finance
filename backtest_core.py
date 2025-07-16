@@ -2,9 +2,6 @@ import logging
 from collections import deque
 
 class PortfolioManager:
-    """
-    Manages the state of the portfolio: cash, positions, and trade history.
-    """
     def __init__(self, initial_capital):
         self.initial_capital = initial_capital
         self.cash = initial_capital
@@ -16,10 +13,6 @@ class PortfolioManager:
         )
 
 class MarketDataContext:
-    """
-    The 'single source of truth' for the market's state at any given point in time.
-    Manages historical data and indicator values.
-    """
     def __init__(self, symbols, history_window = 252):
         self.symbols = symbols
         self.current_date = None
