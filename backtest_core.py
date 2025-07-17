@@ -35,11 +35,6 @@ class PortfolioManager:
                 self.logger.info(f"[{symbol}] TRAILING STOP-LOSS TRIGGERED. Price: ${current_price:.2f}, Stop: ${position['stop_loss']:.2f}")
                 forced_exits.append(symbol)
                 continue # Move to next symbol
-            
-            # # Check for Take-Profit breach
-            # if current_price >= position['take_profit']:
-            #     self.logger.info(f"[{symbol}] TAKE-PROFIT TRIGGERED. Price: ${current_price:.2f}, Target: ${position['take_profit']:.2f}")
-            #     forced_exits.append(symbol)
 
         # Execute exits outside the loop to avoid modifying dict while iterating
         for symbol in forced_exits:
