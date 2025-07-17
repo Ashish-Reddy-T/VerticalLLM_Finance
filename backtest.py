@@ -3,6 +3,7 @@ import yfinance as yf
 from .backtest_core import PortfolioManager, MarketDataContext
 from .new_technical import IncrementalTechnicalAnalyzer
 from .signal_generator import SignalGenerator
+from .new_fundamental import FundamentalAnalyzer # Import the new analyzer
 
 class BacktestEngine:
     def __init__(self, symbols, start_date, end_date, initial_capital):
@@ -13,11 +14,11 @@ class BacktestEngine:
         
         self.portfolio_manager = PortfolioManager(initial_capital, stop_loss_pct=0.10, portfolio_risk_pct=0.01)
         self.signal_generator = SignalGenerator()
+        self.fundamental_analyzer = FundamentalAnalyzer() # Instantiate the analyzer
+        
         indicators = [('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         self.market_context = MarketDataContext(symbols, history_window=50)
-        # Give market context access to portfolio manager to check for positions
-        self.market_context.portfolio_manager = self.portfolio_manager
 
     def _fetch_data(self):
         # ... no changes ...
@@ -40,14 +41,28 @@ class BacktestEngine:
         for date, daily_bar in historical_data.iterrows():
             self.market_context.update(date, daily_bar, self.technical_analyzer)
             
+            # --- 1. Gated Analysis Trigger (Engine's Responsibility) ---
+            if date.is_quarter_start:
+                for symbol in self.symbols:
+                    # The engine calls the analysis and updates the context.
+                    fundamental_score = self.fundamental_analyzer.analyze(symbol, date)
+                    self.market_context.fundamentals[symbol]['score'] = fundamental_score
+
+            # --- 2. Risk Management ---
             self.portfolio_manager.check_risk_limits(self.market_context)
 
+            # --- 3. Signal Generation & Execution ---
             for symbol in self.symbols:
-                # The signal generator now needs the market context
-                signal = self.signal_generator.generate_signal(self.market_context, symbol)
-                if signal in ['BUY', 'SELL']:
+                technical_signal = self.signal_generator.generate_technical_signal(self.market_context, symbol)
+                
+                # For now, we'll just log the signals. In Lesson 15, we'll combine them.
+                if technical_signal != 'HOLD':
+                    self.logger.info(f"[{symbol}] Technical Signal: {technical_signal}")
+
+                # The trading logic remains based on the technical signal for this lesson
+                if technical_signal in ['BUY', 'SELL']:
                     current_price = self.market_context.history[symbol][-1]['Close']
-                    self.portfolio_manager.execute_trade(symbol, signal, current_price, date)
+                    self.portfolio_manager.execute_trade(symbol, technical_signal, current_price, date)
             
             self.portfolio_manager.update_equity_curve(self.market_context)
             
