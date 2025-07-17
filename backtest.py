@@ -17,7 +17,6 @@ class BacktestEngine:
 
         indicators = [('SMA', 20)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
-        
         self.market_context = MarketDataContext(symbols, history_window=50) 
 
     def _fetch_data(self):
@@ -42,15 +41,25 @@ class BacktestEngine:
 
         for date, daily_bar in historical_data.iterrows():
             self.logger.debug(f"--- Processing Date: {date.strftime('%Y-%m-%d')} ---")
-            
             self.market_context.update(date, daily_bar, self.technical_analyzer)
             
             for symbol in self.symbols:
                 signal = self.signal_generator.generate_signal(self.market_context, symbol)
+
+                if signal in ['BUY', 'SELL']:
+                    current_price = self.market_context.history[symbol][-1]['Close']
+                    # For simplicity, we trade a fixed quantity for now.
+                    # A more advanced strategy would have dynamic position sizing.
+                    quantity = 10
+
+                    self.portfolio_manager.execute_trade(symbol, signal, current_price, quantity, date)
             
             # 3. (Future Lesson) Execute trades based on the signal.
             # self.portfolio_manager.execute_trade(signal)
             
         self.logger.info("--- Backtest Run Completed ---")
+        self.logger.info("--- Trade Log ---")
+        for trade_date, trade in self.portfolio_manager.trade_log:
+            self.logger.info(f"{trade_date.strftime('%Y-%m-%d')}: {trade}")
         # 4. (Future Lesson) Print final portfolio summary.
         # self.portfolio_manager.print_summary()

@@ -4,13 +4,43 @@ from collections import deque
 from new_technical import IncrementalTechnicalAnalyzer
 
 class PortfolioManager:
-    def __init__(self, initial_capital):
+    def __init__(self, initial_capital):    
         self.initial_capital = initial_capital
         self.cash = initial_capital
         self.positions = {}  # {'SYMBOL': {'shares': X, 'entry_price': Y}}
         self.trade_log = []
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"PortfolioManager initialized with initial capital: ${self.initial_capital:,.2f}")
+
+    def execute_trade(self, symbol, signal, current_price, quantity, current_date):
+        has_position = symbol in self.positions
+
+        if signal == 'BUY':
+            if not has_position:
+                cost = current_price * quantity
+                if self.cash >= cost:
+                    self.cash -= cost
+                    self.positions[symbol] = {'shares': quantity, 'entry_price': current_price}
+                    trade_record = f"BOUGHT {quantity} {symbol} @ ${current_price:.2f}"
+                    self.logger.info(trade_record)
+                    self.trade_log.append((current_date, trade_record))
+                else:
+                    self.logger.warning(f"[{symbol}] Insufficient cash to BUY")
+            else:
+                self.logger.debug(f"[{symbol}] HOLD signal received, but already have a position. HOLDING.")
+        
+        elif signal == "SELL":
+            if has_position:
+                proceeds = current_price * quantity
+                self.cash += proceeds
+                entry_price = self.positions[symbol]['entry_price']
+                profit = (current_price - entry_price) * quantity
+                trade_record = (f"SOLD {quantity} {symbol} @ ${current_price:.2f} | Entry: ${entry_price:.2f} | P/L: ${profit:,.2f}")
+                self.logger.info(trade_record)
+                self.trade_log.append((current_date, trade_record))
+                del self.positions[symbol]
+            else:
+                self.logger.debug(f"[{symbol}] SELL signal received, but no position. No action taken.")
 
 class MarketDataContext:
     def __init__(self, symbols, history_window = 252):

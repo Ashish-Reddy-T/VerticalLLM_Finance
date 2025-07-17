@@ -29,19 +29,14 @@ class IncrementalTechnicalAnalyzer:
         prev_sma = market_context.indicators[symbol].get(indicator_key)
 
         if prev_sma is None:
-            # First time calculation: compute the full sum
-            # This happens only once per symbol per SMA period.
             current_sum = sum(bar['Close'] for bar in history)
             new_sma = current_sum / period
             self.logger.debug(f"[{symbol}] First SMA_{period} calculation: {new_sma:.2f}")
         else:
-            # Incremental update (the O(1) magic)
             # Get the price that just fell off the deque
             old_price = history[0]['Close'] # This works because the new price is at the end, old at the start
             
-            # Efficiently update the SMA
             new_sma = prev_sma - (old_price / period) + (new_price / period)
             self.logger.debug(f"[{symbol}] Incremental SMA_{period} update: {new_sma:.2f}")
 
-        # Store the newly calculated SMA back into the market context
         market_context.indicators[symbol][indicator_key] = new_sma

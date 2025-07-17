@@ -10,7 +10,7 @@ class SignalGenerator:
         sma_20 = market_context.indicators[symbol].get(indicator_key)
 
         if sma_20 is None:
-            return 'HOLD' #Not enough data yet
+            return 'HOLD'
         
         current_price = market_context.history[symbol][-1]['Close']
 
