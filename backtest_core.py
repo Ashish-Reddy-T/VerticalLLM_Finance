@@ -1,4 +1,4 @@
-import logging
+import logging, pandas as pd
 from collections import deque
 
 from new_technical import IncrementalTechnicalAnalyzer
@@ -80,12 +80,17 @@ class MarketDataContext:
         self.current_date = None
         self.history = {symbol: deque(maxlen=history_window) for symbol in symbols}
         self.indicators = {symbol: {} for symbol in symbols}
+        self.fundamentals = {symbol: {} for symbol in symbols}
+        self.sentiment = {symbol: {} for symbol in symbols}
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"MarketDataContext initialized for symbols: {self.symbols} with a history window of {history_window} days.")
 
     def update(self, date, daily_data_for_all_symbols, technical_analyzer):
         self.current_date = date
         for symbol in self.symbols:
+            if pd.isna(daily_data_for_all_symbols[('Close', symbol)]):
+                self.logger.debug(f"Skipping update for {symbol} on {date.strftime('%Y-%m-%d')} due to missing data.")
+                continue
             symbol_data = {
                 'Open': daily_data_for_all_symbols[('Open', symbol)],
                 'High': daily_data_for_all_symbols[('High', symbol)],
