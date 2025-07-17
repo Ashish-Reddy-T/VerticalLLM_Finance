@@ -1,6 +1,8 @@
 import logging
 from collections import deque
 
+from new_technical import IncrementalTechnicalAnalyzer
+
 class PortfolioManager:
     def __init__(self, initial_capital):
         self.initial_capital = initial_capital
@@ -20,7 +22,7 @@ class MarketDataContext:
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"MarketDataContext initialized for symbols: {self.symbols} with a history window of {history_window} days.")
 
-    def update(self, date, daily_data_for_all_symbols):
+    def update(self, date, daily_data_for_all_symbols, technical_analyzer):
         self.current_date = date
         for symbol in self.symbols:
             symbol_data = {
@@ -31,5 +33,11 @@ class MarketDataContext:
                 'Volume': daily_data_for_all_symbols[('Volume', symbol)]
             }
             self.history[symbol].append(symbol_data)
+            technical_analyzer.update_indicators(self, symbol)
+        
         self.logger.debug(f"Updated context for data: {self.current_date.strftime('%Y-%m-%d')}.")
-        print(self.history)
+        sma_20 = self.indicators['AAPL'].get('SMA_20')
+        if sma_20 is not None:
+            self.logger.info(f"[AAPL] Close: {self.history["AAPL"][-1]['Close']:.2f}, SMA_20: {sma_20:.2f}")
+        else:
+            self.logger.info(f"[AAPL] Close: {self.history['AAPL'][-1]['Close']:.2f}, SMA_20: Not yet available (History: {len(self.history['AAPL'])}/20)")

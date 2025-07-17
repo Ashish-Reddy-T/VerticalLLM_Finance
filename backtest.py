@@ -1,6 +1,7 @@
 import logging
 import yfinance as yf
 from backtest_core import PortfolioManager, MarketDataContext
+from new_technical import IncrementalTechnicalAnalyzer
 
 class BacktestEngine:
     def __init__(self, symbols, start_date, end_date, initial_capital):
@@ -12,6 +13,8 @@ class BacktestEngine:
         self.portfolio_manager = PortfolioManager(initial_capital)
         # In later lessons, we will add the signal generator and other components here.
         # self.signal_generator = SignalGenerator() 
+        indicators = [('SMA', 20)]
+        self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         
         # NOTE: The history window should be large enough for the longest indicator we plan to use.
         self.market_context = MarketDataContext(symbols, history_window=50) 
@@ -40,7 +43,7 @@ class BacktestEngine:
             self.logger.info(f"--- Processing Date: {date.strftime('%Y-%m-%d')} ---")
             
             # 1. Update the market context with the new day's data.
-            self.market_context.update(date, daily_bar)
+            self.market_context.update(date, daily_bar, self.technical_analyzer)
             
             # 2. (Future Lesson) Generate signals based on the new context.
             # signal = self.signal_generator.generate_signal(self.market_context)
