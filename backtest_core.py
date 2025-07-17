@@ -140,8 +140,8 @@ class MarketDataContext:
         self.indicators = {symbol: {} for symbol in symbols}
         self.fundamentals = {symbol: {} for symbol in symbols}
         self.sentiment = {symbol: {} for symbol in symbols}
-        # This will be assigned by the engine after both are created
-        self.portfolio_manager = None 
+        # This will be assigned by the engine after both are created.
+        self.portfolio_manager = None
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"MarketDataContext initialized for symbols: {self.symbols} with a history window of {history_window} days.")
 
