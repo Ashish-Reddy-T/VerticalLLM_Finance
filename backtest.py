@@ -13,15 +13,7 @@ class BacktestEngine:
         self.symbols = symbols
         self.start_date = start_date
         self.end_date = end_date
-        
-        # Pass the new portfolio-level risk parameters
-        self.portfolio_manager = PortfolioManager(
-            initial_capital,
-            stop_loss_pct=0.10,
-            portfolio_risk_pct=0.01,
-            max_portfolio_exposure=0.90, # Can't be more than 90% invested
-            max_position_concentration=0.50 # A single stock can't be more than 50% of our portfolio
-        )
+        self.portfolio_manager = PortfolioManager(initial_capital)
         self.signal_generator = SignalGenerator()
         self.fundamental_analyzer = FundamentalAnalyzer()
         self.sentiment_analyzer = SentimentAnalyzer()
@@ -29,8 +21,8 @@ class BacktestEngine:
         self.market_context = MarketDataContext(symbols, history_window=250)
         self.market_context.portfolio_manager = self.portfolio_manager
 
-    # ... no changes to _fetch_data or run methods ...
     def _fetch_data(self):
+        # ... no changes ...
         self.logger.info(f"Fetching historical data for {self.symbols} and SPY from {self.start_date} to {self.end_date}...")
         try:
             all_symbols = self.symbols + ['SPY']
@@ -43,38 +35,28 @@ class BacktestEngine:
             return None
 
     def run(self):
+        # ... no changes to the start of this method ...
         self.logger.info(f"--- Starting Backtest Run for {self.symbols} ---")
-        
         historical_data = self._fetch_data()
         if historical_data is None or 'SPY' not in historical_data['Close'].columns: return
-
         market_regime = 'NEUTRAL'
         for date, daily_bar in historical_data.iterrows():
             if pd.isna(daily_bar[('Close', 'SPY')]): continue
             self.market_context.update(date, daily_bar, self.technical_analyzer)
-            
-            spy_close = daily_bar[('Close', 'SPY')]
-            spy_history = historical_data.loc[:date, ('Close', 'SPY')]
-            if len(spy_history) >= 200:
-                spy_sma_200 = spy_history.rolling(window=200).mean().iloc[-1]
+            if len(historical_data.loc[:date]) >= 200:
+                spy_close = daily_bar[('Close', 'SPY')]
+                spy_sma_200 = historical_data.loc[:date, ('Close', 'SPY')].rolling(window=200).mean().iloc[-1]
                 new_regime = 'RISK_ON' if spy_close > spy_sma_200 else 'RISK_OFF'
                 if new_regime != market_regime:
-                    self.logger.info(f"REGIME CHANGE: Market is now {new_regime} (SPY vs SMA200)")
+                    self.logger.info(f"REGIME CHANGE: Market is now {new_regime}")
                     market_regime = new_regime
-
             self.portfolio_manager.check_risk_limits(self.market_context)
-
             for symbol in self.symbols:
                 final_signal = self.signal_generator.generate_signal(self.market_context, symbol, market_regime)
-                
-                if final_signal != 'HOLD':
-                    self.logger.info(f"[{symbol}] Final Signal Generated: {final_signal} (Regime: {market_regime})")
-
                 if final_signal == 'BUY':
                     current_price = self.market_context.history[symbol][-1]['Close']
-                    self.portfolio_manager.execute_trade(symbol, final_signal, current_price, date)
-            
+                    # Pass the full context to the trade execution method
+                    self.portfolio_manager.execute_trade(symbol, final_signal, current_price, date, self.market_context)
             self.portfolio_manager.update_equity_curve(self.market_context)
-            
         self.logger.info("--- Backtest Run Completed ---")
         self.portfolio_manager.print_summary()
