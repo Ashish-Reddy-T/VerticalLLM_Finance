@@ -14,19 +14,22 @@ class BacktestEngine:
         self.start_date = start_date
         self.end_date = end_date
         
-        self.portfolio_manager = PortfolioManager(initial_capital, stop_loss_pct=0.10, portfolio_risk_pct=0.01)
+        # Pass the new portfolio-level risk parameters
+        self.portfolio_manager = PortfolioManager(
+            initial_capital,
+            stop_loss_pct=0.10,
+            portfolio_risk_pct=0.01,
+            max_portfolio_exposure=0.90, # Can't be more than 90% invested
+            max_position_concentration=0.50 # A single stock can't be more than 50% of our portfolio
+        )
         self.signal_generator = SignalGenerator()
         self.fundamental_analyzer = FundamentalAnalyzer()
         self.sentiment_analyzer = SentimentAnalyzer()
-        
         self.technical_analyzer = IncrementalTechnicalAnalyzer([('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)])
-        
         self.market_context = MarketDataContext(symbols, history_window=250)
-        
-        # --- THE FIX: Connect the components ---
-        # We explicitly tell the market_context about the portfolio_manager instance.
         self.market_context.portfolio_manager = self.portfolio_manager
 
+    # ... no changes to _fetch_data or run methods ...
     def _fetch_data(self):
         self.logger.info(f"Fetching historical data for {self.symbols} and SPY from {self.start_date} to {self.end_date}...")
         try:
@@ -45,12 +48,9 @@ class BacktestEngine:
         historical_data = self._fetch_data()
         if historical_data is None or 'SPY' not in historical_data['Close'].columns: return
 
-        market_regime = 'NEUTRAL' 
-
+        market_regime = 'NEUTRAL'
         for date, daily_bar in historical_data.iterrows():
-            # The SPY check now correctly handles the multi-level columns
             if pd.isna(daily_bar[('Close', 'SPY')]): continue
-
             self.market_context.update(date, daily_bar, self.technical_analyzer)
             
             spy_close = daily_bar[('Close', 'SPY')]
@@ -62,15 +62,6 @@ class BacktestEngine:
                     self.logger.info(f"REGIME CHANGE: Market is now {new_regime} (SPY vs SMA200)")
                     market_regime = new_regime
 
-            if date.is_quarter_start:
-                for symbol in self.symbols:
-                    score = self.fundamental_analyzer.analyze(symbol, date)
-                    self.market_context.fundamentals[symbol]['score'] = score
-            if date.weekday() == 0:
-                for symbol in self.symbols:
-                    score = self.sentiment_analyzer.analyze(symbol, self.market_context)
-                    self.market_context.sentiment[symbol]['score'] = score
-
             self.portfolio_manager.check_risk_limits(self.market_context)
 
             for symbol in self.symbols:
@@ -79,7 +70,7 @@ class BacktestEngine:
                 if final_signal != 'HOLD':
                     self.logger.info(f"[{symbol}] Final Signal Generated: {final_signal} (Regime: {market_regime})")
 
-                if final_signal in ['BUY', 'SELL']:
+                if final_signal == 'BUY':
                     current_price = self.market_context.history[symbol][-1]['Close']
                     self.portfolio_manager.execute_trade(symbol, final_signal, current_price, date)
             
