@@ -1,23 +1,22 @@
 import logging
 import yfinance as yf
 from .backtest_core import PortfolioManager, MarketDataContext
-from .new_technical import IncrementalTechnicalAnalyzer
 from .signal_generator import SignalGenerator
+from .new_technical import IncrementalTechnicalAnalyzer
 from .new_fundamental import FundamentalAnalyzer
-from .new_sentimental import SentimentAnalyzer 
+from .new_sentimental import SentimentAnalyzer
 
 class BacktestEngine:
     def __init__(self, symbols, start_date, end_date, initial_capital):
+        # ... no changes to __init__ ...
         self.logger = logging.getLogger(__name__)
         self.symbols = symbols
         self.start_date = start_date
         self.end_date = end_date
-        
         self.portfolio_manager = PortfolioManager(initial_capital, stop_loss_pct=0.10, portfolio_risk_pct=0.01)
         self.signal_generator = SignalGenerator()
         self.fundamental_analyzer = FundamentalAnalyzer()
-        self.sentiment_analyzer = SentimentAnalyzer() # Instantiate the new analyzer
-        
+        self.sentiment_analyzer = SentimentAnalyzer()
         indicators = [('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         self.market_context = MarketDataContext(symbols, history_window=50)
@@ -43,30 +42,30 @@ class BacktestEngine:
         for date, daily_bar in historical_data.iterrows():
             self.market_context.update(date, daily_bar, self.technical_analyzer)
             
-            # --- Gated Analysis Triggers ---
+            # Gated Analysis Triggers
             if date.is_quarter_start:
                 for symbol in self.symbols:
                     score = self.fundamental_analyzer.analyze(symbol, date)
                     self.market_context.fundamentals[symbol]['score'] = score
-            
-            # Trigger sentiment analysis on Mondays (weekday() == 0)
             if date.weekday() == 0:
                 for symbol in self.symbols:
                     score = self.sentiment_analyzer.analyze(symbol, self.market_context)
                     self.market_context.sentiment[symbol]['score'] = score
 
-            # --- Risk & Trade Execution ---
+            # Risk Management
             self.portfolio_manager.check_risk_limits(self.market_context)
 
+            # --- Unified Signal Generation & Execution ---
             for symbol in self.symbols:
-                technical_signal = self.signal_generator.generate_technical_signal(self.market_context, symbol)
+                # Call the main generate_signal method which now does everything
+                final_signal = self.signal_generator.generate_signal(self.market_context, symbol)
                 
-                if technical_signal != 'HOLD':
-                    self.logger.info(f"[{symbol}] Technical Signal: {technical_signal}")
+                if final_signal != 'HOLD':
+                    self.logger.info(f"[{symbol}] Final Signal Generated: {final_signal}")
 
-                if technical_signal in ['BUY', 'SELL']:
+                if final_signal in ['BUY', 'SELL']:
                     current_price = self.market_context.history[symbol][-1]['Close']
-                    self.portfolio_manager.execute_trade(symbol, technical_signal, current_price, date)
+                    self.portfolio_manager.execute_trade(symbol, final_signal, current_price, date)
             
             self.portfolio_manager.update_equity_curve(self.market_context)
             
