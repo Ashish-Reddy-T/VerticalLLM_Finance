@@ -21,7 +21,7 @@ class BacktestEngine:
     def _fetch_data(self):
         self.logger.info(f"Fetching historical data for {self.symbols} from {self.start_date} to {self.end_date}...")
         try:
-            data = yf.download(self.symbols, start=self.start_date, end=self.end_date)
+            data = yf.download(self.symbols, start=self.start_date, end=self.end_date, auto_adjust=True)
             if data.empty:
                 self.logger.error("Data fetching failed - Tickers or Date Range may be incorrect.")
                 return None
@@ -45,12 +45,14 @@ class BacktestEngine:
             for symbol in self.symbols:
                 signal = self.signal_generator.generate_signal(self.market_context, symbol)
 
+                if signal != 'HOLD':
+                    self.logger.info(f"[{symbol}] Signal Generated: {signal}")
+
                 if signal in ['BUY', 'SELL']:
                     current_price = self.market_context.history[symbol][-1]['Close']
                     # For simplicity, we trade a fixed quantity for now.
                     # A more advanced strategy would have dynamic position sizing.
                     quantity = 10
-
                     self.portfolio_manager.execute_trade(symbol, signal, current_price, quantity, date)
             
             self.portfolio_manager.update_equity_curve(self.market_context)

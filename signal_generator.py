@@ -21,4 +21,5 @@ class SignalGenerator:
         else:
             signal = 'HOLD'
         
-        self.logger.info(f"[{symbol}] Signal: {signal} (Price: {current_price:.2f}, SMA_20: {sma_20:.2f})")
+        # self.logger.info(f"[{symbol}] Signal: {signal} (Price: {current_price:.2f}, SMA_20: {sma_20:.2f})")
+        return signal

@@ -30,6 +30,7 @@ class PortfolioManager:
         has_position = symbol in self.positions
 
         if signal == 'BUY':
+            # (This is a simple long-only, no-pyramiding strategy). We'll look into advanced stuff afterwards
             if not has_position:
                 cost = current_price * quantity
                 if self.cash >= cost:
