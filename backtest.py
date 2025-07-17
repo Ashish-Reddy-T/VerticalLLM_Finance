@@ -8,13 +8,26 @@ from .new_fundamental import FundamentalAnalyzer
 from .new_sentimental import SentimentAnalyzer
 
 class BacktestEngine:
-    def __init__(self, symbols, start_date, end_date, initial_capital):
+    def __init__(self, symbols, start_date, end_date, initial_capital, strategy_params: dict):
         self.logger = logging.getLogger(__name__)
         self.symbols = symbols
         self.start_date = start_date
         self.end_date = end_date
-        self.portfolio_manager = PortfolioManager(initial_capital)
-        self.signal_generator = SignalGenerator()
+        
+        # Unpack strategy parameters
+        self.portfolio_manager = PortfolioManager(
+            initial_capital,
+            stop_loss_pct=strategy_params['stop_loss_pct'],
+            portfolio_risk_pct=strategy_params['portfolio_risk_pct'],
+            max_portfolio_exposure=0.90, # Keep these fixed for now
+            max_position_concentration=0.50
+        )
+        self.signal_generator = SignalGenerator(
+            buy_threshold=strategy_params['buy_threshold'],
+            sell_threshold=strategy_params['sell_threshold'],
+            technical_weight=0.6 # Keep fixed for now
+        )
+
         self.fundamental_analyzer = FundamentalAnalyzer()
         self.sentiment_analyzer = SentimentAnalyzer()
         self.technical_analyzer = IncrementalTechnicalAnalyzer([('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)])
@@ -52,11 +65,11 @@ class BacktestEngine:
                     market_regime = new_regime
             self.portfolio_manager.check_risk_limits(self.market_context)
             for symbol in self.symbols:
-                final_signal = self.signal_generator.generate_signal(self.market_context, symbol, market_regime)
+                final_signal = self.signal_generator.generate_signal(self.market_context, symbol, market_regime)    
                 if final_signal == 'BUY':
                     current_price = self.market_context.history[symbol][-1]['Close']
                     # Pass the full context to the trade execution method
                     self.portfolio_manager.execute_trade(symbol, final_signal, current_price, date, self.market_context)
             self.portfolio_manager.update_equity_curve(self.market_context)
         self.logger.info("--- Backtest Run Completed ---")
-        self.portfolio_manager.print_summary()
+        return self.portfolio_manager.get_summary()

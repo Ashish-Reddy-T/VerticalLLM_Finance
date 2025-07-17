@@ -1,12 +1,17 @@
 import logging
 
 class SignalGenerator:
-    def __init__(self):
+    def __init__(self, buy_threshold: float, sell_threshold: float, technical_weight: float):
         self.logger = logging.getLogger(__name__)
         self.logger.info("SignalGenerator initialized with a multi-factor model.")
-        self.weights = {'technical': 0.6, 'fundamental': 0.2, 'sentiment': 0.2}
-        self.buy_threshold = 0.3
-        self.sell_threshold = -0.3
+        # Weights are now passed in, fundamentals and sentiment are derived
+        self.weights = {
+            'technical': technical_weight,
+            'fundamental': (1.0 - technical_weight) / 2,
+            'sentiment': (1.0 - technical_weight) / 2
+        }
+        self.buy_threshold = buy_threshold
+        self.sell_threshold = sell_threshold
 
     def _get_technical_score(self, market_context, symbol) -> float:
         # ... no changes to this method ...

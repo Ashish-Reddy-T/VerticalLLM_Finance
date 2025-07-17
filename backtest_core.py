@@ -8,9 +8,10 @@ class PortfolioManager:
     """
     Manages the portfolio, now with an understanding of inter-stock correlation risk.
     """
-    def __init__(self, initial_capital: float, stop_loss_pct: float = 0.05, portfolio_risk_pct: float = 0.01,
-                 max_portfolio_exposure: float = 0.90, max_position_concentration: float = 0.25,
-                 correlation_threshold: float = 0.80):
+    def __init__(self, initial_capital: float, stop_loss_pct: float, portfolio_risk_pct: float,
+                max_portfolio_exposure: float, max_position_concentration: float,
+                correlation_threshold: float = 0.80):
+
         self.initial_capital: float = initial_capital
         self.cash: float = initial_capital
         self.positions: dict = {}
@@ -23,7 +24,7 @@ class PortfolioManager:
         self.max_portfolio_exposure = max_portfolio_exposure
         self.max_position_concentration = max_position_concentration
         self.correlation_threshold = correlation_threshold
-        
+
         self.logger.info(f"PortfolioManager initialized with initial capital: ${self.initial_capital:,.2f}")
         self.logger.info(f"Risk settings: Trailing Stop={self.stop_loss_pct:.1%}, Trade Risk={self.portfolio_risk_pct:.1%}, "
                        f"Max Exposure={self.max_portfolio_exposure:.1%}, Max Position Size={self.max_position_concentration:.1%}, "
@@ -135,6 +136,16 @@ class PortfolioManager:
         current_holdings_value = self.get_current_holdings_value(market_context)
         total_equity = self.cash + current_holdings_value
         self.equity_curve.append((market_context.current_date, total_equity))
+    
+    def get_summary(self):
+        if not self.equity_curve:
+            return {'total_return_pct': 0, 'total_trades': 0}
+        final_equity = self.equity_curve[-1][1]
+        total_return_pct = ((final_equity - self.initial_capital) / self.initial_capital) * 100
+        return {
+            'total_return_pct': total_return_pct,
+            'total_trades': len(self.trade_log)
+        }
 
     def print_summary(self):
         # ... (unchanged)
