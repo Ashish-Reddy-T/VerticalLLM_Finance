@@ -12,7 +12,7 @@ class BacktestEngine:
         self.start_date = start_date
         self.end_date = end_date
         
-        self.portfolio_manager = PortfolioManager(initial_capital, risk_per_trade=0.05, take_profit_pct=0.10)
+        self.portfolio_manager = PortfolioManager(initial_capital, stop_loss_pct=0.1, take_profit_pct=0.1)
         self.signal_generator = SignalGenerator()
         indicators = [('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)

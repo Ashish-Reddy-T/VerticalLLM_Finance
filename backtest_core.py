@@ -4,7 +4,7 @@ from collections import deque
 from .new_technical import IncrementalTechnicalAnalyzer
 
 class PortfolioManager:
-    def __init__(self, initial_capital, risk_per_trade = 0.02, take_profit_pct = 0.05):    
+    def __init__(self, initial_capital, stop_loss_pct = 0.05, take_profit_pct = 0.1):    
         self.initial_capital = initial_capital
         self.cash = initial_capital
         self.positions = {}  # {'SYMBOL': {'shares': X, 'entry_price': Y, 'stop_loss': Z, 'take_profit': W}}
@@ -12,61 +12,66 @@ class PortfolioManager:
         self.equity_curve = []
         self.logger = logging.getLogger(__name__)
 
-        self.stop_loss_pct = risk_per_trade
+        self.stop_loss_pct = stop_loss_pct
         self.take_profit_pct = take_profit_pct
 
         self.logger.info(f"PortfolioManager initialized with initial capital: ${self.initial_capital:,.2f}")
-        self.logger.info(f"Risk settings: Stop-Loss at {self.stop_loss_pct:.1%}, Take-Profit at {self.take_profit_pct:.1%}")
+        self.logger.info(f"Risk settings: Trailing Stop-Loss at {self.stop_loss_pct:.1%}, Take-Profit at {self.take_profit_pct:.1%}")
 
     def check_risk_limits(self, market_context):
         forced_exits = []
         for symbol, position in self.positions.items():
             current_price = market_context.history[symbol][-1]['Close']
+
+            new_high_water_mark = max(position['high_water_mark'], current_price)
+            if new_high_water_mark > position['high_water_mark']:
+                position['high_water_mark'] = new_high_water_mark
+                # The stop-loss can only move UP
+                position['stop_loss'] = new_high_water_mark * (1 - self.stop_loss_pct)
+                self.logger.debug(f"[{symbol}] Trailing stop adjusted up to ${position['stop_loss']:.2f} due to new high of ${new_high_water_mark:.2f}")
             
             # Check for Stop-Loss breach
             if current_price <= position['stop_loss']:
-                self.logger.info(f"[{symbol}] STOP-LOSS TRIGGERED. Price: ${current_price:.2f}, Stop: ${position['stop_loss']:.2f}")
+                self.logger.info(f"[{symbol}] TRAILING STOP-LOSS TRIGGERED. Price: ${current_price:.2f}, Stop: ${position['stop_loss']:.2f}")
                 forced_exits.append(symbol)
                 continue # Move to next symbol
             
-            # Check for Take-Profit breach
-            if current_price >= position['take_profit']:
-                self.logger.info(f"[{symbol}] TAKE-PROFIT TRIGGERED. Price: ${current_price:.2f}, Target: ${position['take_profit']:.2f}")
-                forced_exits.append(symbol)
+            # # Check for Take-Profit breach
+            # if current_price >= position['take_profit']:
+            #     self.logger.info(f"[{symbol}] TAKE-PROFIT TRIGGERED. Price: ${current_price:.2f}, Target: ${position['take_profit']:.2f}")
+            #     forced_exits.append(symbol)
 
         # Execute exits outside the loop to avoid modifying dict while iterating
         for symbol in forced_exits:
             current_price = market_context.history[symbol][-1]['Close']
-            self.execute_trade(symbol, 'SELL', current_price, self.positions[symbol]['shares'], market_context.current_date, triggered_by='RISK_MANAGER')
-    
-    def execute_trade(self, symbol, signal, price, quantity, current_date, triggered_by):
+            self.execute_trade(symbol, 'SELL', current_price, self.positions[symbol]['shares'], market_context.current_date, triggered_by='TRAIL_STOP')
+
+    def execute_trade(self, symbol, signal, price, quantity, current_date, triggered_by='SIGNAL'):
         has_position = symbol in self.positions
+
         if signal == 'BUY' and not has_position:
             cost = price * quantity
             if self.cash >= cost:
                 self.cash -= cost
                 
-                # --- Set SL/TP levels upon entry ---
+                # --- Set initial SL and High-Water Mark upon entry ---
                 stop_loss_price = price * (1 - self.stop_loss_pct)
-                take_profit_price = price * (1 + self.take_profit_pct)
-
+                
                 self.positions[symbol] = {
                     'shares': quantity,
                     'entry_price': price,
                     'stop_loss': stop_loss_price,
-                    'take_profit': take_profit_price
+                    'high_water_mark': price # Initial high-water mark is the entry price
                 }
-                trade_record = f"BOUGHT {quantity} {symbol} @ ${price:.2f} (SL: {stop_loss_price:.2f}, TP: {take_profit_price:.2f})"
+                trade_record = f"BOUGHT {quantity} {symbol} @ ${price:.2f} (Initial SL: {stop_loss_price:.2f})"
                 self.logger.info(trade_record)
                 self.trade_log.append((current_date, trade_record))
-            else:
-                self.logger.warning(f"[{symbol}] Insufficient cash to BUY")
+
         elif signal == 'SELL' and has_position:
             proceeds = price * quantity
             self.cash += proceeds
             entry_price = self.positions[symbol]['entry_price']
             profit = (price - entry_price) * quantity
-            
             trade_record = f"SOLD {quantity} {symbol} @ ${price:.2f} | Entry: ${entry_price:.2f} | P/L: ${profit:,.2f} | Trigger: {triggered_by}"
             self.logger.info(trade_record)
             self.trade_log.append((current_date, trade_record))
