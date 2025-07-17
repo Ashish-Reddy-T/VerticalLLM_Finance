@@ -12,13 +12,9 @@ class BacktestEngine:
         self.start_date = start_date
         self.end_date = end_date
         
-        self.portfolio_manager = PortfolioManager(initial_capital)
+        self.portfolio_manager = PortfolioManager(initial_capital, risk_per_trade=0.05, take_profit_pct=0.10)
         self.signal_generator = SignalGenerator()
-        indicators = [
-            ('SMA', 20),
-            ('RSI', 14),
-            ('BBANDS', 20, 2)
-        ]
+        indicators = [('SMA', 20), ('RSI', 14), ('BBANDS', 20, 2)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         self.market_context = MarketDataContext(symbols, history_window=50) 
 
@@ -45,19 +41,16 @@ class BacktestEngine:
         for date, daily_bar in historical_data.iterrows():
             self.logger.debug(f"--- Processing Date: {date.strftime('%Y-%m-%d')} ---")
             self.market_context.update(date, daily_bar, self.technical_analyzer)
+            self.portfolio_manager.check_risk_limits(self.market_context)
             
             for symbol in self.symbols:
                 signal = self.signal_generator.generate_signal(self.market_context, symbol)
-
-                if signal != 'HOLD':
-                    self.logger.info(f"[{symbol}] Signal Generated: {signal}")
-
                 if signal in ['BUY', 'SELL']:
                     current_price = self.market_context.history[symbol][-1]['Close']
                     # For simplicity, we trade a fixed quantity for now.
                     # A more advanced strategy would have dynamic position sizing.
                     quantity = 10
-                    self.portfolio_manager.execute_trade(symbol, signal, current_price, quantity, date)
+                    self.portfolio_manager.execute_trade(symbol, signal, current_price, quantity, date, triggered_by='SIGNAL')
             
             self.portfolio_manager.update_equity_curve(self.market_context)
             

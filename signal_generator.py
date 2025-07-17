@@ -30,14 +30,14 @@ class SignalGenerator:
         
         # Fundamental
         if current_date.is_quarter_start:
-            self.logger.info(f"[{symbol}] Quarterly trigger: Running fundamental analysis.")
+            self.logger.debug(f"[{symbol}] Quarterly trigger: Running fundamental analysis.")
             # In a real system:
             # fundamental_score = fundamental_analyzer.analyze(symbol, current_date)
             # market_context.fundamentals[symbol] = fundamental_score
         
         # Sentimental
         if current_date.weekday() == 0:
-            self.logger.info(f"[{symbol}] Weekly trigger: Running sentiment analysis.")
+            self.logger.debug(f"[{symbol}] Weekly trigger: Running sentiment analysis.")
             # In a real system:
             # sentiment_score = sentiment_analyzer.analyze(symbol, current_date)
             # market_context.sentiments[symbol] = sentiment_score
