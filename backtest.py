@@ -14,7 +14,6 @@ class BacktestEngine:
         
         self.portfolio_manager = PortfolioManager(initial_capital)
         self.signal_generator = SignalGenerator()
-
         indicators = [('SMA', 20)]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         self.market_context = MarketDataContext(symbols, history_window=50) 
@@ -54,12 +53,7 @@ class BacktestEngine:
 
                     self.portfolio_manager.execute_trade(symbol, signal, current_price, quantity, date)
             
-            # 3. (Future Lesson) Execute trades based on the signal.
-            # self.portfolio_manager.execute_trade(signal)
+            self.portfolio_manager.update_equity_curve(self.market_context)
             
         self.logger.info("--- Backtest Run Completed ---")
-        self.logger.info("--- Trade Log ---")
-        for trade_date, trade in self.portfolio_manager.trade_log:
-            self.logger.info(f"{trade_date.strftime('%Y-%m-%d')}: {trade}")
-        # 4. (Future Lesson) Print final portfolio summary.
-        # self.portfolio_manager.print_summary()
+        self.portfolio_manager.print_summary()
