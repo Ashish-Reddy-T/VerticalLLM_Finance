@@ -10,7 +10,7 @@ from enum import Enum
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 
-from utils import get_keys
+from ..utils import get_keys
 
 class SentimentSignal(Enum):
     VERY_POSITIVE = 2

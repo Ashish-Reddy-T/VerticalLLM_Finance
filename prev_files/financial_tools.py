@@ -1,5 +1,5 @@
 import yfinance as yf, requests
-from utils import get_config
+from ..utils import get_config
 
 def load_config():
     """Load configuration using :func:`utils.get_config`."""

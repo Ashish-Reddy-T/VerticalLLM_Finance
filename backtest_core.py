@@ -1,7 +1,7 @@
 import logging, pandas as pd
 from collections import deque
 
-from new_technical import IncrementalTechnicalAnalyzer
+from .new_technical import IncrementalTechnicalAnalyzer
 
 class PortfolioManager:
     def __init__(self, initial_capital):    

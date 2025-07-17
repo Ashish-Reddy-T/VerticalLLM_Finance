@@ -2,7 +2,6 @@ import os, yaml,logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 
-
 def get_config():
     config_path = Path(__file__).parent / "config.yaml"
     with open(config_path, 'r') as f:

@@ -20,7 +20,7 @@ class SignalGenerator:
     def generate_signal(self, market_context, symbol):
         # 1. Warm-up check
 
-        indicators = ['SMA_20']
+        indicators = ['SMA_20', 'RSI', 'BBANDS']
         if not self._is_indicator_ready(market_context, symbol, indicators):
             self.logger.debug(f"[{symbol}] Indicators not ready. Holding.")
             return 'HOLD'
@@ -43,12 +43,17 @@ class SignalGenerator:
             # market_context.sentiments[symbol] = sentiment_score
         
         # 3. Technical Logic
-        sma_20 = market_context.indicators[symbol]['SMA_20']
         current_price = market_context.history[symbol][-1]['Close']
+        sma_20 = market_context.indicators[symbol]['SMA_20']
+        rsi_value = market_context.indicators[symbol]['RSI']['value']
+        # bbands = market_context.indicators[symbol]['BBANDS']
 
-        if current_price > sma_20:
+        is_uptrend = current_price > sma_20
+        is_not_overbought = rsi_value < 70
+
+        if is_uptrend and is_not_overbought:
             technical_signal = 'BUY'
-        elif current_price < sma_20:
+        elif not is_uptrend:
             technical_signal = 'SELL'
         else:
             technical_signal = 'HOLD'

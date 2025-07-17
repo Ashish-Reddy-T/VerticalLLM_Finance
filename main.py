@@ -1,4 +1,4 @@
-from agent import handle_query
+from .agent import handle_query
 
 def chat_session():
     print("\n---")

@@ -1,11 +1,11 @@
 from llama_cpp import Llama
 
-from utils import get_keys
-from financial_tools import search_yahoo_api, get_stock_quote
-from technical_analysis import TechnicalAnalyzer
-from fundamental_analysis import FundamentalAnalyzer
-from sentiment_analysis import SentimentAnalyzer
-from self_rag import SelfRAG
+from .utils import get_keys
+from .prev_files.financial_tools import search_yahoo_api, get_stock_quote
+from .prev_files.technical_analysis import TechnicalAnalyzer
+from .prev_files.fundamental_analysis import FundamentalAnalyzer
+from .prev_files.sentiment_analysis import SentimentAnalyzer
+from .self_rag import SelfRAG
 
 # Initialize LLM
 print("Agent: Loading configuration...")

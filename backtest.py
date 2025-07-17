@@ -1,9 +1,9 @@
 import logging
 import yfinance as yf
 
-from backtest_core import PortfolioManager, MarketDataContext
-from signal_generator import SignalGenerator
-from new_technical import IncrementalTechnicalAnalyzer
+from .backtest_core import PortfolioManager, MarketDataContext
+from .signal_generator import SignalGenerator
+from .new_technical import IncrementalTechnicalAnalyzer
 
 class BacktestEngine:
     def __init__(self, symbols, start_date, end_date, initial_capital):
@@ -14,7 +14,11 @@ class BacktestEngine:
         
         self.portfolio_manager = PortfolioManager(initial_capital)
         self.signal_generator = SignalGenerator()
-        indicators = [('SMA', 20)]
+        indicators = [
+            ('SMA', 20),
+            ('RSI', 14),
+            ('BBANDS', 20, 2)
+        ]
         self.technical_analyzer = IncrementalTechnicalAnalyzer(indicators)
         self.market_context = MarketDataContext(symbols, history_window=50) 
 
